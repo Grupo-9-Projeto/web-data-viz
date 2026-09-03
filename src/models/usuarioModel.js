@@ -24,8 +24,18 @@ function cadastrar(nome, email, senha, token) {
     console.log("Executando a instrução SQL: \n" + instrucaoSql);
     return database.executar(instrucaoSql);
 }
+function criarUsuario(empresa_id, nome, email, token) {
+    let instrucao = `
+        insert into usuario (empresa_id, nome, email, token)
+        values (${empresa_id},'${nome}', '${email}', '${token}');
+    `
+
+    return database.executar(instrucao)
+}
+
 
 module.exports = {
     autenticar,
-    cadastrar
+    cadastrar,
+    criarUsuario
 };
