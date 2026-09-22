@@ -23,7 +23,9 @@ function autenticar(req, res) {
                             id: resultadoAutenticar[0].id_usuario, 
                             email: resultadoAutenticar[0].email,
                             name: resultadoAutenticar[0].nome,     
-                            cargo: resultadoAutenticar[0].cargo
+                            cargo: resultadoAutenticar[0].cargo,
+                            gestorId: resultadoAutenticar[0].gestor_id,
+                            empresaId: resultadoAutenticar[0].empresa_id
                         });
 
                     } else if (resultadoAutenticar.length == 0) {
