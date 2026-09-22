@@ -23,7 +23,9 @@ function autenticar(req, res) {
                             id: resultadoAutenticar[0].id_usuario, 
                             email: resultadoAutenticar[0].email,
                             name: resultadoAutenticar[0].nome,     
-                            cargo: resultadoAutenticar[0].cargo
+                            cargo: resultadoAutenticar[0].cargo,
+                            gestorId: resultadoAutenticar[0].gestor_id,
+                            empresaId: resultadoAutenticar[0].empresa_id
                         });
 
                     } else if (resultadoAutenticar.length == 0) {
@@ -79,7 +81,44 @@ function cadastrar(req, res) {
     }
 }
 
+function criarUsuario() {
+    const empresaId = req.body.empresaIdServer;
+    const nome = req.body.nameServer;
+    const email = req.body.emailServer;
+    const token = req.body.tokenServer;
+
+    // Faça as validações dos valores
+    if (!nome) {
+        res.status(400).send("O nome está indefinido!");
+    } else if (!email) {
+        res.status(400).send("O e-mail está indefinido!");
+    } else if (!empresaId) {
+        res.status(400).send("A senha está indefinida!");
+    } else if (!token) {
+        res.status(400).send("O token está indefinido!");
+    } else {
+
+        // Passe os valores como parâmetro e vá para o arquivo usuarioModel.js
+        usuarioModel.criarUsuario(empresaId, nome, email, token)
+            .then(
+                function (resultado) {
+                    res.json(resultado);
+                }
+            ).catch(
+                function (erro) {
+                    console.log(erro);
+                    console.log(
+                        "\nHouve um erro ao realizar o cadastro! Erro: ",
+                        erro.sqlMessage
+                    );
+                    res.status(500).json(erro.sqlMessage);
+                }
+            );
+    }
+}
+
 module.exports = {
     autenticar,
-    cadastrar
+    cadastrar,
+    criarUsuario
 }
