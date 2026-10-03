@@ -1,124 +1,179 @@
+var bcrypt = require("bcrypt");
+var jwt = require("jsonwebtoken");
 var usuarioModel = require("../models/usuarioModel");
 
-function autenticar(req, res) {
+async function autenticar(req, res) {
     var email = req.body.emailServer;
     var senha = req.body.passwordHashServer;
 
-    if (email == undefined) {
-        res.status(400).send("Seu email está undefined!");
-    } else if (senha == undefined) {
-        res.status(400).send("Sua senha está indefinida!");
-    } else {
+    if (!email || !senha) {
+        res.status(400).json("Tá faltando campo")
+        return false;
+    }
 
-        usuarioModel.autenticar(email, senha)
-            .then(
-                function (resultadoAutenticar) {
-                    console.log(`\nResultados encontrados: ${resultadoAutenticar.length}`);
-                    console.log(`Resultados: ${JSON.stringify(resultadoAutenticar)}`);
+    try {
+        const resposta = await usuarioModel.autenticar(email);
 
-                    if (resultadoAutenticar.length == 1) {
-                        console.log(resultadoAutenticar);
+        let senha_resposta = resposta[0].senha_hash;
+        let ativo_resposta = resposta[0].ativo;
 
-                        res.json({
-                            id: resultadoAutenticar[0].id_usuario, 
-                            email: resultadoAutenticar[0].email,
-                            name: resultadoAutenticar[0].nome,     
-                            cargo: resultadoAutenticar[0].cargo,
-                            gestorId: resultadoAutenticar[0].gestor_id,
-                            empresaId: resultadoAutenticar[0].empresa_id
-                        });
+        if (await bcrypt.compare(senha, senha_resposta) && ativo_resposta == 1) {
+            let valores = {
+                id: resposta[0].id_usuario,
+                gestor_id: resposta[0].gestor_id,
+                nome: resposta[0].nome,
+                email: resposta[0].email,
+                cargo: resposta[0].cargo,
+                empresa: resposta[0].fk_empresa_fornecedora
+            }
 
-                    } else if (resultadoAutenticar.length == 0) {
-                        res.status(403).send("Email e/ou senha inválido(s)");
-                    } else {
-                        res.status(403).send("Mais de um usuário com o mesmo login e senha!");
-                    }
-                }
-            ).catch(
-                function (erro) {
-                    console.log(erro);
-                    console.log("\nHouve um erro ao realizar o login! Erro: ", erro.sqlMessage);
-                    res.status(500).json(erro.sqlMessage);
-                }
+            const accessToken = jwt.sign(
+                { id: valores.id, role: valores.cargo, gestor: valores.gestor_id, empresa: valores.empresa },
+                process.env.JWT_SECRET,
+                { expiresIn: process.env.JWT_EXPIRES }
             );
+
+            res.status(200).json({
+                "resposta": "Usuário logado com sucesso",
+                "token": accessToken
+            })
+            console.log("Usuário logado!")
+            return true;
+        } else {
+            console.log("Usuário não foi logado")
+            res.status(401).json("Senha errada ou o usuário foi desativado")
+            return false;
+        }
+
+    } catch (erro) {
+        console.log("Deu erro")
+        console.log(erro)
+        res.status(401).json(erro)
+        return null;
     }
 }
 
-function cadastrar(req, res) {
-    // Crie uma variável que vá recuperar os valores do arquivo cadastro.html
-    var nome = req.body.nameServer;
-    var email = req.body.emailServer;
-    var senha = req.body.passwordHashServer;
-    var token = req.body.tokenServer;
+async function cadastrar(req, res) {
+    let nome = req.body.nameServer;
+    let email = req.body.emailServer;
+    let senha = await bcrypt.hash(req.body.passwordHashServer, 10);
+    let token = req.body.tokenServer;
 
-    // Faça as validações dos valores
-    if (!nome) {
-        res.status(400).send("O nome está indefinido!");
-    } else if (!email) {
-        res.status(400).send("O e-mail está indefinido!");
-    } else if (!senha) {
-        res.status(400).send("A senha está indefinida!");
-    } else if (!token) {
-        res.status(400).send("O token está indefinido!");
-    } else {
+    if (!nome || !email || !senha || !token) {
+        res.status(400).json("Campos vazios")
+        return;
+    }
 
-        // Passe os valores como parâmetro e vá para o arquivo usuarioModel.js
-        usuarioModel.cadastrar(nome, email, senha, token)
-            .then(
-                function (resultado) {
-                    res.json(resultado);
-                }
-            ).catch(
-                function (erro) {
-                    console.log(erro);
-                    console.log(
-                        "\nHouve um erro ao realizar o cadastro! Erro: ",
-                        erro.sqlMessage
-                    );
-                    res.status(500).json(erro.sqlMessage);
-                }
-            );
+    try {
+        const respostaAtivo = await usuarioModel.autenticar(email);
+
+        if (respostaAtivo.length == 0) {
+            res.status(400).json({
+                "res": "Email errado",
+            })
+            console.log("Email errado")
+            return false;
+        }
+
+        const resposta = await usuarioModel.cadastrar(nome, email, senha, token);
+
+        if (resposta.affectedRows == 0) {
+            res.status(400).json("token errado")
+            return false;
+        }
+
+        const respostatoken = await usuarioModel.inutilizarToken(email, token);
+        res.status(200).json("Usuário criado com sucesso e token inutilizado com sucesso")
+        return true;
+    } catch (erro) {
+        console.log("Deu erro")
+        console.log(erro)
+        res.status(400).json(erro)
+        return null;
     }
 }
 
-function criarUsuario() {
-    const empresaId = req.body.empresaIdServer;
-    const nome = req.body.nameServer;
-    const email = req.body.emailServer;
-    const token = req.body.tokenServer;
+async function editarConta(req, res) {
+    let id = req.user.id;
 
-    // Faça as validações dos valores
-    if (!nome) {
-        res.status(400).send("O nome está indefinido!");
-    } else if (!email) {
-        res.status(400).send("O e-mail está indefinido!");
-    } else if (!empresaId) {
-        res.status(400).send("A senha está indefinida!");
-    } else if (!token) {
-        res.status(400).send("O token está indefinido!");
+    let nome = req.body.nome;
+    let email = req.body.email;
+    let senha = await bcrypt.hash(req.body.senha, 10);
+
+    if (!nome || !email || !senha) {
+        console.log("Campo vazio")
+        res.status(400).json("tá faltando algum campo")
+        return false;
+    }
+    try {
+
+        const existeEmail = await usuarioModel.validarEmail(email);
+
+        if (existeEmail.length > 0) {
+            res.status(400).json({
+                "res": "Email Já cadastrado"
+            })
+            console.log("Email já está vinculado a outra conta")
+            return false;
+        }
+
+        const resposta = await usuarioModel.editar(nome, email, senha, id);
+
+        res.status(200).json({
+            "res": "Atualização feita com sucesso"
+        })
+
+        console.log("Atualiza deu certo ")
+        return true;
+    } catch (erro) {
+        res.status(400).json({
+            "res": "Deu erro",
+            "erro": erro
+        })
+        console.log(erro)
+    }
+
+}
+
+async function deletarConta(req, res) {
+    let id = req.user.id;
+
+    let confirmacao = req.body.confirmacao;
+
+    if (!confirmacao) {
+        console.log("Campo vazio")
+        res.status(400).json("tá faltando algum campo")
+        return false;
+    }
+
+    if (confirmacao.toLowerCase() == "confirmar") {
+        try {
+            const resposta = await usuarioModel.deletarConta(id);
+            res.status(200).json({
+                "res": "conta deletada com sucesso"
+            })
+
+            console.log(" deu certo ")
+            return true;
+        } catch (erro) {
+            res.status(400).json({
+                "res": "Deu erro",
+                "erro": erro
+            })
+            console.log(erro)
+        }
     } else {
-
-        // Passe os valores como parâmetro e vá para o arquivo usuarioModel.js
-        usuarioModel.criarUsuario(empresaId, nome, email, token)
-            .then(
-                function (resultado) {
-                    res.json(resultado);
-                }
-            ).catch(
-                function (erro) {
-                    console.log(erro);
-                    console.log(
-                        "\nHouve um erro ao realizar o cadastro! Erro: ",
-                        erro.sqlMessage
-                    );
-                    res.status(500).json(erro.sqlMessage);
-                }
-            );
+        res.status(400).json({
+            "res": "Deu erro, precisa confirmar",
+        })
+        console.log("precisa de confirmação para deletar")
     }
 }
+
 
 module.exports = {
     autenticar,
     cadastrar,
-    criarUsuario
+    editarConta,
+    deletarConta
 }
