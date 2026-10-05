@@ -14,8 +14,18 @@ async function autenticar(req, res) {
     try {
         const resposta = await usuarioModel.autenticar(email);
 
+         if (resposta.length == 0) {
+            res.status(404).json({
+                "res": "Email errado",
+            })
+            console.log("Email errado")
+            return false;
+        }
         let senha_resposta = resposta[0].senha_hash;
         let ativo_resposta = resposta[0].ativo;
+
+        console.log(await bcrypt.compare(senha, senha_resposta))
+        console.log(senha)
 
         if (await bcrypt.compare(senha, senha_resposta) && ativo_resposta == 1) {
             let valores = {
@@ -40,7 +50,7 @@ async function autenticar(req, res) {
             console.log("Usuário logado!")
             return true;
         } else {
-            console.log("Usuário não foi logado")
+            console.log("Usuário não foi logado, senha errada ou ele foi desativado")
             res.status(401).json("Senha errada ou o usuário foi desativado")
             return false;
         }
@@ -48,7 +58,7 @@ async function autenticar(req, res) {
     } catch (erro) {
         console.log("Deu erro")
         console.log(erro)
-        res.status(401).json(erro)
+        res.status(500).json(erro)
         return null;
     }
 }
@@ -68,7 +78,7 @@ async function cadastrar(req, res) {
         const respostaAtivo = await usuarioModel.autenticar(email);
 
         if (respostaAtivo.length == 0) {
-            res.status(400).json({
+            res.status(404).json({
                 "res": "Email errado",
             })
             console.log("Email errado")
@@ -78,17 +88,17 @@ async function cadastrar(req, res) {
         const resposta = await usuarioModel.cadastrar(nome, email, senha, token);
 
         if (resposta.affectedRows == 0) {
-            res.status(400).json("token errado")
+            res.status(401).json("token errado")
             return false;
         }
 
         const respostatoken = await usuarioModel.inutilizarToken(email, token);
-        res.status(200).json("Usuário criado com sucesso e token inutilizado com sucesso")
+        res.status(201).json("Usuário criado com sucesso e token inutilizado com sucesso")
         return true;
     } catch (erro) {
         console.log("Deu erro")
         console.log(erro)
-        res.status(400).json(erro)
+        res.status(500).json(erro)
         return null;
     }
 }
@@ -107,10 +117,10 @@ async function editarConta(req, res) {
     }
     try {
 
-        const existeEmail = await usuarioModel.validarEmail(email);
+        const existeEmail = await usuarioModel.validarEmail(email, id);
 
         if (existeEmail.length > 0) {
-            res.status(400).json({
+            res.status(409).json({
                 "res": "Email Já cadastrado"
             })
             console.log("Email já está vinculado a outra conta")
@@ -126,7 +136,7 @@ async function editarConta(req, res) {
         console.log("Atualiza deu certo ")
         return true;
     } catch (erro) {
-        res.status(400).json({
+        res.status(500).json({
             "res": "Deu erro",
             "erro": erro
         })
@@ -156,7 +166,7 @@ async function deletarConta(req, res) {
             console.log(" deu certo ")
             return true;
         } catch (erro) {
-            res.status(400).json({
+            res.status(500).json({
                 "res": "Deu erro",
                 "erro": erro
             })

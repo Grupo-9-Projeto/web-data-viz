@@ -22,9 +22,11 @@ app.use(express.static(path.join(__dirname, "public")));
 
 var indexRouter = require("./src/routes/index");
 var usuarioRouter = require("./src/routes/usuarios");
+var empresaRouter = require("./src/routes/empresas");
 
 app.use("/", indexRouter);
 app.use("/usuarios", usuarioRouter);
+app.use("/empresa", empresaRouter);
 
 app.listen(PORTA_APP, function () {
     console.log(`
