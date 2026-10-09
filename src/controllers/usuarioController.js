@@ -14,7 +14,7 @@ async function autenticar(req, res) {
     try {
         const resposta = await usuarioModel.autenticar(email);
 
-         if (resposta.length == 0) {
+        if (resposta.length == 0) {
             res.status(404).json({
                 "res": "Email errado",
             })
@@ -146,7 +146,7 @@ async function editarConta(req, res) {
 }
 
 async function deletarConta(req, res) {
-    let id = req.user.id;
+    let id = req.user;
 
     let confirmacao = req.body.confirmacao;
 
@@ -158,7 +158,15 @@ async function deletarConta(req, res) {
 
     if (confirmacao.toLowerCase() == "confirmar") {
         try {
-            const resposta = await usuarioModel.deletarConta(id);
+            const resposta = await usuarioModel.deletarConta(id.id);
+
+            if (resposta[0].affectedRows == 0 || resposta[1].affectedRows == 0 || resposta[2].affectedRows == 0) {
+                res.status(404).json({
+                    "res": "deu algum erro. Provavelmente o usuário já foi apagado"
+                })
+                console.log("Deu erro, chefe")
+                return false;
+            }
             res.status(200).json({
                 "res": "conta deletada com sucesso"
             })
@@ -180,10 +188,106 @@ async function deletarConta(req, res) {
     }
 }
 
+async function cadastraSuperAdmin(req, res) {
+    let senha = await bcrypt.hash(req.body.passwordHashServer, 10);
+
+    if (!senha) {
+        res.status(400).json("Campos vazios")
+        return;
+    }
+
+    try {
+        const respostaAtivo = await usuarioModel.autenticar("admin@cisco.com");
+
+        if (respostaAtivo.length == 1) {
+            res.status(404).json({
+                "res": "já existe um super admin",
+            })
+            console.log("já existe")
+            return false;
+        }
+
+        const resposta = await usuarioModel.cadastrarSuperAdmin(senha);
+
+        res.status(201).json("Usuário criado com sucesso")
+        return true;
+    } catch (erro) {
+        console.log("Deu erro")
+        console.log(erro)
+        res.status(500).json(erro)
+        return null;
+    }
+}
+
+async function cadastrarGerente(req, res) {
+    let role = req.user
+    let email = req.body.email;
+
+    if (role.id != 1) {
+        res.status(404).json({
+            "res": "Não pode entrar aqui"
+        })
+        console.log("Não pode acessar")
+        return
+    }
+
+    if(!email){
+        res.status(404).json({
+            "res": "faltando campo"
+        })
+        console.log("faltando campo")
+        return
+    }
+
+    try {
+        const resposta = await usuarioModel.autenticar(email);
+        
+                if(resposta.length != 0){
+                    res.status(400).json("Usuário já cadastrado");
+                    console.log("Usuário já existe")
+                    return;
+                }
+        
+                fetch("http://localhost:3333/usuarios/criar-usuario", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        cargo: "gerente",
+                        gestor_id: role.id
+                    })
+                }).then(response => {
+                    if (response.ok) {
+                        console.log("Criação de usuário realizado com sucesso! Um email já foi enviado com o token de acesso.");
+                        res.status(200).json({
+                            "res": "Usuário gerente criado com sucesso"
+                        })
+                        return true;
+                    } else {
+                        console.log("Houve um erro ao tentar realizar a criação de usuário. Verifique se o token é válido.");
+                        res.status(400).json({
+                            "res": "Houve um erro ao tentar realizar a criação de usuário. Verifique se o token é válido."
+                        })
+                        return false;
+                    }
+                })
+        
+    } catch (erro) {
+        console.log("Deu erro")
+        console.log(erro)
+        res.status(500).json(erro)
+        return null;
+    }
+}
+
 
 module.exports = {
     autenticar,
     cadastrar,
     editarConta,
-    deletarConta
+    deletarConta,
+    cadastraSuperAdmin,
+    cadastrarGerente
 }

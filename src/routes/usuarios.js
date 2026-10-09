@@ -25,4 +25,14 @@ router.delete("/deletar_conta", function(req, res, next){
     usuarioController.deletarConta(req, res);
 })
 
+router.post("/cadastrar_super", function(req, res){
+    usuarioController.cadastraSuperAdmin(req, res);
+})
+
+router.post("/cadastrar_gerente", function(req, res, next){
+    authToken.authMiddlewareUser(req, res , next)
+}, function(req, res){
+    usuarioController.cadastrarGerente(req, res);
+})
+
 module.exports = router;

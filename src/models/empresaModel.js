@@ -46,10 +46,32 @@ async function deletarEmpresa(id_usuario, id_empresa){
 
 }
 
+function listarInformacoesEmpresa(id, empresa){
+    let instrucao = `
+SELECT id_usuario AS id_usuario, gestor_id AS gestor, nome_fantasia AS nome_empresa, cnpj, ec.criacao FROM usuario AS us 
+INNER JOIN usuario_empresa AS ue ON us.id_usuario = ue.usuario_id
+INNER JOIN empresa_cliente AS ec ON ue.empresa_id = ec.id_empresa
+WHERE id_usuario = ? AND empresa_id = ?`;
+
+    let valores = [id, empresa]
+    return database.executar(instrucao, valores);
+}
+
+function verificarEmpresa(id){
+    let instrucao = `SELECT usuario_id, gestor_id, nome, id_empresa, nome_fantasia FROM usuario_empresa AS ue
+INNER JOIN usuario AS us ON ue.usuario_id = us.id_usuario
+INNER JOIN empresa_cliente AS ec ON ec.id_empresa = ue.empresa_id
+WHERE us.id_usuario = ?`
+
+    return database.executar(instrucao, id)
+}
+
 module.exports = {
     listarEmpresa,
     criarEmpresa,
     associarEmpresa,
     editarEmpresa,
-    deletarEmpresa
+    deletarEmpresa,
+    listarInformacoesEmpresa,
+    verificarEmpresa
 };
