@@ -30,6 +30,9 @@ async function criarEmpresa(req, res) {
 
     let nome = req.body.nome_empresa;
     let cnpj = req.body.cnpj;
+    let nivel_sla = req.body.nivel_sla;
+    let limite_resposta = req.body.limite_resposta;
+    let status_sla = req.body.status_sla;
 
     if (infoUsuario.role != "gerente") {
 
@@ -49,19 +52,32 @@ async function criarEmpresa(req, res) {
     }
 
     try {
-        const resultadoCriacao = await empresaModel.criarEmpresa(nome, cnpj);
+        const resposta = await empresaModel.listarEmpresas(infoUsuario.id);
+        for(let i = 0; i < resposta.length; i++){
+            if(resposta[i].cnpj.toLowerCase() == cnpj.toLowerCase()){
+                res.status(400).json("Já existe um cnpj desse")
+                console.log("Já existe um cnpj desse")
+                return false;
+            }
+        }
 
-        if (resultadoCriacao.affectedRows == 0) {
+        const resultadoCriacao = await empresaModel.criarEmpresa(nome, cnpj);
+        const resultadoContrato = await empresaModel.criarSla(nivel_sla, limite_resposta, status_sla, resultadoCriacao.insertId);
+
+        if(resultadoCriacao.affectedRows == 0 || resultadoContrato.affectedRows == 0) {
             res.status(400).json({
                 "res": "deu algum erro"
             })
             console.log("Deu erro, chefe")
             return false;
         }
+        
 
         console.log("empresa criada com sucesso. Associando ela ao usuário...")
 
         const resultadoAssociacao = await empresaModel.associarEmpresa(infoUsuario.id, resultadoCriacao.insertId);
+
+
         console.log(resultadoAssociacao)
         console.log("Usuário associado com sucesso")
         res.status(201).json({
@@ -94,7 +110,7 @@ async function editarEmpresa(req, res) {
         return false;
     }
 
-    if (!nome || !cnpj) {
+    if (!nome || !cnpj || !id) {
         res.status(400).json({
             "res": "faltando algum campo"
         })
@@ -178,7 +194,7 @@ async function deletarEmpresa(req, res) {
 
         const resposta = await empresaModel.deletarEmpresa(infoUsuario.id, id);
 
-        if (resposta.affectedRows == 0) {
+        if (resposta[0].affectedRows == 0 && resposta[1].affectedRows == 0) {
             res.status(404).json({
                 "res": "deu algum erro, provavelmente a empresa não existe associada a esse usuário"
             })
@@ -245,7 +261,7 @@ async function listarInformacoesEmpresa(req, res) {
 
             const resposta = await empresaModel.listarInformacoesEmpresa(id, empresa_id);
 
-            if (resposta.affectedRows == 0) {
+            if (resposta.length == 0) {
                 res.status(404).json({
                     "res": "deu algum erro, provavelmente não tem nenhuma informação dessa empresa"
                 })

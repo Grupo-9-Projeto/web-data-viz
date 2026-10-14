@@ -45,12 +45,9 @@ function validarEmail(email, id){
 }
 
 async function deletarConta(id){
-    let instrucao = await database.executar("DELETE FROM usuario_empresa WHERE usuario_id = ?", id);
-    let instrucao2 = await database.executar("DELETE FROM usuario WHERE id_usuario = ?", id);
-    let instrucao3 = await database.executar("UPDATE usuario SET gestor_id = null WHERE gestor_id = ?", id);
-    let valores = [instrucao, instrucao2, instrucao3]
+    let intrucao = `UPDATE usuario SET ativo = 0 WHERE id_usuario = ?`;
     
-    return valores;
+    return database.executar(intrucao, id);
 }
 
 function cadastrarSuperAdmin(senha){

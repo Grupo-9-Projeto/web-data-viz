@@ -150,6 +150,15 @@ async function deletarConta(req, res) {
 
     let confirmacao = req.body.confirmacao;
 
+    if (id.role != "gerente") {
+
+        res.status(403).json({
+            "res": "Não permitido"
+        })
+        console.log("Deu erro, chefe")
+        return false;
+    }
+
     if (!confirmacao) {
         console.log("Campo vazio")
         res.status(400).json("tá faltando algum campo")
@@ -160,18 +169,11 @@ async function deletarConta(req, res) {
         try {
             const resposta = await usuarioModel.deletarConta(id.id);
 
-            if (resposta[0].affectedRows == 0 || resposta[1].affectedRows == 0 || resposta[2].affectedRows == 0) {
-                res.status(404).json({
-                    "res": "deu algum erro. Provavelmente o usuário já foi apagado"
-                })
-                console.log("Deu erro, chefe")
-                return false;
-            }
             res.status(200).json({
-                "res": "conta deletada com sucesso"
+                "res": "conta desativada com sucesso"
             })
 
-            console.log(" deu certo ")
+            console.log("deu certo ")
             return true;
         } catch (erro) {
             res.status(500).json({
@@ -231,7 +233,7 @@ async function cadastrarGerente(req, res) {
         return
     }
 
-    if(!email){
+    if (!email) {
         res.status(404).json({
             "res": "faltando campo"
         })
@@ -241,39 +243,39 @@ async function cadastrarGerente(req, res) {
 
     try {
         const resposta = await usuarioModel.autenticar(email);
-        
-                if(resposta.length != 0){
-                    res.status(400).json("Usuário já cadastrado");
-                    console.log("Usuário já existe")
-                    return;
-                }
-        
-                fetch("http://localhost:3333/usuarios/criar-usuario", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        email: email,
-                        cargo: "gerente",
-                        gestor_id: role.id
-                    })
-                }).then(response => {
-                    if (response.ok) {
-                        console.log("Criação de usuário realizado com sucesso! Um email já foi enviado com o token de acesso.");
-                        res.status(200).json({
-                            "res": "Usuário gerente criado com sucesso"
-                        })
-                        return true;
-                    } else {
-                        console.log("Houve um erro ao tentar realizar a criação de usuário. Verifique se o token é válido.");
-                        res.status(400).json({
-                            "res": "Houve um erro ao tentar realizar a criação de usuário. Verifique se o token é válido."
-                        })
-                        return false;
-                    }
+
+        if (resposta.length != 0) {
+            res.status(400).json("Usuário já cadastrado");
+            console.log("Usuário já existe")
+            return;
+        }
+
+        fetch("http://localhost:3333/usuarios/criar-usuario", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                email: email,
+                cargo: "gerente",
+                gestor_id: role.id
+            })
+        }).then(response => {
+            if (response.ok) {
+                console.log("Criação de usuário realizado com sucesso! Um email já foi enviado com o token de acesso.");
+                res.status(200).json({
+                    "res": "Usuário gerente criado com sucesso"
                 })
-        
+                return true;
+            } else {
+                console.log("Houve um erro ao tentar realizar a criação de usuário. Verifique se o token é válido.");
+                res.status(400).json({
+                    "res": "Houve um erro ao tentar realizar a criação de usuário. Verifique se o token é válido."
+                })
+                return false;
+            }
+        })
+
     } catch (erro) {
         console.log("Deu erro")
         console.log(erro)

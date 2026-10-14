@@ -24,9 +24,8 @@ async function listarFuncionarios(req, res) {
         }
 
         for(let i = 0; i < resposta.length; i++){
-            if(resposta[i].nome == null){
+            if(resposta[i].nome == null || resposta[i].ativo != 1){
                 continue
-
             }else{
                 arrayRes.push(resposta[i])
             }
@@ -210,7 +209,7 @@ async function desativarFuncionario(req, res) {
 
         const resposta = await funcionarioModel.desativarFuncionario(id);
 
-        if (resposta[1].affectedRows == 0 || resposta[0].affectedRows == 0) {
+        if (resposta.affectedRows == 0) {
             res.status(404).json({
                 "res": "deu algum erro. Provavelmente o usuário já foi apagado"
             })

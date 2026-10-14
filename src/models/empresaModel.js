@@ -48,9 +48,10 @@ async function deletarEmpresa(id_usuario, id_empresa){
 
 function listarInformacoesEmpresa(id, empresa){
     let instrucao = `
-SELECT id_usuario AS id_usuario, gestor_id AS gestor, nome_fantasia AS nome_empresa, cnpj, ec.criacao FROM usuario AS us 
+SELECT id_usuario AS id_usuario, gestor_id AS gestor, nome_fantasia AS nome_empresa, cnpj, cs.nivel_sla, cs.limite_resposta, cs.status_sla ,ec.criacao FROM usuario AS us 
 INNER JOIN usuario_empresa AS ue ON us.id_usuario = ue.usuario_id
 INNER JOIN empresa_cliente AS ec ON ue.empresa_id = ec.id_empresa
+INNER JOIN contrato_sla AS cs ON cs.fkEmpresa = ec.id_empresa
 WHERE id_usuario = ? AND empresa_id = ?`;
 
     let valores = [id, empresa]
@@ -58,12 +59,24 @@ WHERE id_usuario = ? AND empresa_id = ?`;
 }
 
 function verificarEmpresa(id){
-    let instrucao = `SELECT usuario_id, gestor_id, nome, id_empresa, nome_fantasia FROM usuario_empresa AS ue
+    let instrucao = `SELECT usuario_id, gestor_id, nome, id_empresa, nome_fantasia, cnpj FROM usuario_empresa AS ue
 INNER JOIN usuario AS us ON ue.usuario_id = us.id_usuario
 INNER JOIN empresa_cliente AS ec ON ec.id_empresa = ue.empresa_id
 WHERE us.id_usuario = ?`
 
     return database.executar(instrucao, id)
+}
+
+function criarSla(nivel_sla, limite_resposta, status_sla, empresa_id){
+    let intrucao = `INSERT INTO contrato_sla(nivel_sla, limite_resposta, status_sla, fkEmpresa) VALUES(? , ? ,? ,?)`;
+
+    return database.executar(intrucao, [nivel_sla, limite_resposta, status_sla, empresa_id])
+}
+
+function listarEmpresas(){
+    let intrucao = `SELECT cnpj FROM empresa_cliente`
+
+    return database.executar(intrucao)
 }
 
 module.exports = {
@@ -73,5 +86,7 @@ module.exports = {
     editarEmpresa,
     deletarEmpresa,
     listarInformacoesEmpresa,
-    verificarEmpresa
+    verificarEmpresa,
+    criarSla,
+    listarEmpresas
 };

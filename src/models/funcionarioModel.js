@@ -2,7 +2,7 @@ const e = require("express");
 var database = require("../database/config")
 
 function listarFuncionarios(id){
-    let instrucao = `SELECT funcionario.nome, funcionario.email, funcionario.cargo, gerente.nome AS nome_gestor FROM usuario AS gerente
+    let instrucao = `SELECT funcionario.nome, funcionario.email, funcionario.cargo, gerente.nome AS nome_gestor, funcionario.ativo FROM usuario AS gerente
 INNER JOIN usuario AS funcionario ON gerente.id_usuario = funcionario.gestor_id
 WHERE gerente.id_usuario = ?`;
 
@@ -26,10 +26,9 @@ WHERE us2.id_usuario = ?`
 }
 
 async function desativarFuncionario(id){
-    let instrucao = await database.executar(`DELETE FROM usuario_empresa WHERE usuario_id = ?`, id);
-    let instrucao2 = await database.executar(`DELETE FROM usuario WHERE id_usuario = ?`, id);
-    let respostas = [instrucao, instrucao2];
-    return respostas
+    let instrucao = `UPDATE usuario SET ativo = 0 WHERE id_usuario = ?`;
+
+    return database.executar(instrucao, id)
 }
 
 function informacoesFuncionario(id){
