@@ -44,10 +44,25 @@ function validarEmail(email, id){
     return database.executar(instrucao, valores);
 }
 
-function deletarConta(id){
-    let instrucao = "UPDATE usuario SET ativo = 0 WHERE id_usuario = ?";
+async function deletarConta(id){
+    let intrucao = `UPDATE usuario SET ativo = 0 WHERE id_usuario = ?`;
     
-    return database.executar(instrucao, id)
+    return database.executar(intrucao, id);
+}
+
+function cadastrarSuperAdmin(senha){
+    let instrucao = `INSERT INTO usuario (
+    gestor_id,
+    nome,
+    email,
+    senha_hash,
+    cargo,
+    fk_empresa_fornecedora,
+    ativo
+) VALUES
+(NULL, 'admin', 'admin@cisco.com', ?, 'gerente', 1, 1)`;
+
+    return database.executar(instrucao, senha)
 }
 
 
@@ -57,5 +72,6 @@ module.exports = {
     inutilizarToken,
     editar,
     validarEmail,
-    deletarConta
+    deletarConta,
+    cadastrarSuperAdmin
 };

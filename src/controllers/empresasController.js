@@ -30,6 +30,9 @@ async function criarEmpresa(req, res) {
 
     let nome = req.body.nome_empresa;
     let cnpj = req.body.cnpj;
+    let nivel_sla = req.body.nivel_sla;
+    let limite_resposta = req.body.limite_resposta;
+    let status_sla = req.body.status_sla;
 
     if (infoUsuario.role != "gerente") {
 
@@ -49,19 +52,32 @@ async function criarEmpresa(req, res) {
     }
 
     try {
-        const resultadoCriacao = await empresaModel.criarEmpresa(nome, cnpj);
+        const resposta = await empresaModel.listarEmpresas(infoUsuario.id);
+        for(let i = 0; i < resposta.length; i++){
+            if(resposta[i].cnpj.toLowerCase() == cnpj.toLowerCase()){
+                res.status(400).json("Já existe um cnpj desse")
+                console.log("Já existe um cnpj desse")
+                return false;
+            }
+        }
 
-        if (resultadoCriacao.affectedRows == 0) {
+        const resultadoCriacao = await empresaModel.criarEmpresa(nome, cnpj);
+        const resultadoContrato = await empresaModel.criarSla(nivel_sla, limite_resposta, status_sla, resultadoCriacao.insertId);
+
+        if(resultadoCriacao.affectedRows == 0 || resultadoContrato.affectedRows == 0) {
             res.status(400).json({
                 "res": "deu algum erro"
             })
             console.log("Deu erro, chefe")
             return false;
         }
+        
 
         console.log("empresa criada com sucesso. Associando ela ao usuário...")
 
         const resultadoAssociacao = await empresaModel.associarEmpresa(infoUsuario.id, resultadoCriacao.insertId);
+
+
         console.log(resultadoAssociacao)
         console.log("Usuário associado com sucesso")
         res.status(201).json({
@@ -94,7 +110,7 @@ async function editarEmpresa(req, res) {
         return false;
     }
 
-    if (!nome || !cnpj) {
+    if (!nome || !cnpj || !id) {
         res.status(400).json({
             "res": "faltando algum campo"
         })
@@ -104,6 +120,21 @@ async function editarEmpresa(req, res) {
 
 
     try {
+        const respostaVerificao = await empresaModel.verificarEmpresa(infoUsuario.id);
+        const ids = [];
+
+        for (let i = 0; i < respostaVerificao.length; i++) {
+            ids.push(respostaVerificao[i].id_empresa)
+        }
+
+        if (!ids.includes(id)) {
+            res.status(400).json({
+                "res": "Não pode mexer nessa empresa"
+            })
+            console.log("Não pode mexer aqui")
+            return;
+        }
+
         const resposta = await empresaModel.editarEmpresa(nome, cnpj, id);
 
         if (resposta.affectedRows == 0) {
@@ -144,11 +175,27 @@ async function deletarEmpresa(req, res) {
         return false;
     }
 
-    try{
+    try {
+
+        const respostaVerificao = await empresaModel.verificarEmpresa(infoUsuario.id);
+        const ids = [];
+
+        for (let i = 0; i < respostaVerificao.length; i++) {
+            ids.push(respostaVerificao[i].id_empresa)
+        }
+
+        if (!ids.includes(id)) {
+            res.status(400).json({
+                "res": "Não pode mexer nessa empresa"
+            })
+            console.log("Não pode mexer aqui")
+            return;
+        }
+
         const resposta = await empresaModel.deletarEmpresa(infoUsuario.id, id);
 
-        if(resposta.affectedRows == 0){
-             res.status(404).json({
+        if (resposta[0].affectedRows == 0 && resposta[1].affectedRows == 0) {
+            res.status(404).json({
                 "res": "deu algum erro, provavelmente a empresa não existe associada a esse usuário"
             })
             console.log("Deu erro, chefe")
@@ -159,7 +206,7 @@ async function deletarEmpresa(req, res) {
             "res": "Deu certo, empresa apagada!"
         })
         return true;
-    }catch(erro){
+    } catch (erro) {
         res.status(500).json({
             "res": "Deu erro",
             "erro": erro
@@ -169,9 +216,104 @@ async function deletarEmpresa(req, res) {
     }
 }
 
+async function listarInformacoesEmpresa(req, res) {
+    let cargo = req.user.role;
+    let id = req.user.id;
+    let id_gerente = req.user.gerente;
+
+    let empresa_id = req.body.empresa_id;
+
+    if (!empresa_id) {
+        res.status(400).json({
+            "res": "faltando algum campo"
+        })
+        console.log("Deu erro, chefe")
+        return false;
+    }
+    try {
+        const respostaVerificao = await empresaModel.verificarEmpresa(id);
+        const ids = [];
+
+        for (let i = 0; i < respostaVerificao.length; i++) {
+            ids.push(respostaVerificao[i].id_empresa)
+        }
+
+        if (!ids.includes(empresa_id)) {
+            res.status(400).json({
+                "res": "Não pode mexer nessa empresa"
+            })
+            console.log("Não pode mexer aqui")
+            return;
+        }
+
+    } catch (erro) {
+        res.status(500).json({
+            "res": "Deu erro",
+            "erro": erro
+        })
+        console.log(erro);
+        return false;
+    }
+
+    if (cargo == "gerente") {
+        try {
+
+
+            const resposta = await empresaModel.listarInformacoesEmpresa(id, empresa_id);
+
+            if (resposta.length == 0) {
+                res.status(404).json({
+                    "res": "deu algum erro, provavelmente não tem nenhuma informação dessa empresa"
+                })
+                console.log("Deu erro, chefe")
+                return false;
+            }
+
+            res.status(200).json({
+                "res": resposta
+            })
+            return true;
+        } catch (erro) {
+            res.status(500).json({
+                "res": "Deu erro",
+                "erro": erro
+            })
+            console.log(erro);
+            return false;
+        }
+    } else if (cargo == "analista") {
+        try {
+            const resposta = await empresaModel.listarInformacoesEmpresa(id_gerente, empresa_id);
+
+            if (resposta.affectedRows == 0) {
+                res.status(404).json({
+                    "res": "deu algum erro, provavelmente não tem nenhuma informação dessa empresa"
+                })
+                console.log("Deu erro, chefe")
+                return false;
+            }
+
+            res.status(200).json({
+                "res": resposta
+            })
+            return true;
+        } catch (erro) {
+            res.status(500).json({
+                "res": "Deu erro",
+                "erro": erro
+            })
+            console.log(erro);
+            return false;
+        }
+    }
+}
+
+
+
 module.exports = {
     listarEmpresas,
     criarEmpresa,
     editarEmpresa,
-    deletarEmpresa
+    deletarEmpresa,
+    listarInformacoesEmpresa
 }

@@ -21,12 +21,19 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, "public")));
 
 var indexRouter = require("./src/routes/index");
+
 var usuarioRouter = require("./src/routes/usuarios");
 var empresaRouter = require("./src/routes/empresas");
+var funcionarioRouter = require("./src/routes/funcionarios");
+var dispositivoRouter = require("./src/routes/dispositivos");
+var componentesRouter = require("./src/routes/componentes");
 
 app.use("/", indexRouter);
 app.use("/usuarios", usuarioRouter);
 app.use("/empresa", empresaRouter);
+app.use("/funcionarios", funcionarioRouter);
+app.use("/dispositivos", dispositivoRouter);
+app.use("/componentes", componentesRouter);
 
 app.listen(PORTA_APP, function () {
     console.log(`
