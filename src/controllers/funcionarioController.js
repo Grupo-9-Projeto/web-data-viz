@@ -100,6 +100,11 @@ async function criarFuncionario(req, res) {
                 })
                 return false;
             }
+        }).catch(erro => {
+            console.log("Serviço de e-mail indisponível:", erro.message);
+            res.status(502).json({
+                "res": "Serviço de e-mail indisponível. Tente novamente em instantes."
+            })
         })
 
     } catch (erro) {
@@ -142,7 +147,7 @@ async function editarFuncionario(req, res) {
         const respostaFunc = await funcionarioModel.verificarfuncionario(id);
 
         console.log(respostaFunc)
-        if(respostaFunc[0].gestor_id != infoUsuario.id || respostaFunc.length == 0){
+        if(respostaFunc.length == 0 || respostaFunc[0].gestor_id != infoUsuario.id){
             res.status(400).json("Não pode mexer nesse funcionário")
             console.log("Não pode mexer nesse")
             return;
@@ -176,8 +181,6 @@ async function desativarFuncionario(req, res) {
     let infoUsuario = req.user;
     let id = req.body.id;
 
-    console.log(req)
-
     if (infoUsuario.role != "gerente") {
 
         res.status(403).json({
@@ -201,7 +204,7 @@ async function desativarFuncionario(req, res) {
         const respostaFunc = await funcionarioModel.verificarfuncionario(id);
 
         console.log(respostaFunc)
-        if(respostaFunc[0].gestor_id != infoUsuario.id || respostaFunc.length == 0){
+        if(respostaFunc.length == 0 || respostaFunc[0].gestor_id != infoUsuario.id){
             res.status(400).json("Não pode mexer nesse funcionário")
             console.log("Não pode mexer nesse")
             return;
@@ -257,7 +260,7 @@ async function informacoesUsuario(req, res) {
         const respostaFunc = await funcionarioModel.verificarfuncionario(id);
 
         console.log(respostaFunc)
-        if(respostaFunc[0].gestor_id != infoUsuario.id || respostaFunc.length == 0){
+        if(respostaFunc.length == 0 || respostaFunc[0].gestor_id != infoUsuario.id){
             res.status(400).json("Não pode mexer nesse funcionário")
             console.log("Não pode mexer nesse")
             return;
