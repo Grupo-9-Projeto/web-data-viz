@@ -2,7 +2,7 @@ const e = require("express");
 var database = require("../database/config")
 
 function listarFuncionarios(id){
-    let instrucao = `SELECT funcionario.nome, funcionario.email, funcionario.cargo, gerente.nome AS nome_gestor, funcionario.ativo FROM usuario AS gerente
+    let instrucao = `SELECT funcionario.id_usuario AS id, funcionario.nome, funcionario.email, funcionario.cargo, gerente.nome AS nome_gestor, funcionario.ativo FROM usuario AS gerente
 INNER JOIN usuario AS funcionario ON gerente.id_usuario = funcionario.gestor_id
 WHERE gerente.id_usuario = ?`;
 
