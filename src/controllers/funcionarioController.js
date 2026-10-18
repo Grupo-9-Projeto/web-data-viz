@@ -100,6 +100,11 @@ async function criarFuncionario(req, res) {
                 })
                 return false;
             }
+        }).catch(erro => {
+            console.log("Serviço de e-mail indisponível:", erro.message);
+            res.status(502).json({
+                "res": "Serviço de e-mail indisponível. Tente novamente em instantes."
+            })
         })
 
     } catch (erro) {
@@ -142,7 +147,7 @@ async function editarFuncionario(req, res) {
         const respostaFunc = await funcionarioModel.verificarfuncionario(id);
 
         console.log(respostaFunc)
-        if(respostaFunc[0].gestor_id != infoUsuario.id || respostaFunc.length == 0){
+        if(respostaFunc.length == 0 || respostaFunc[0].gestor_id != infoUsuario.id){
             res.status(400).json("Não pode mexer nesse funcionário")
             console.log("Não pode mexer nesse")
             return;
@@ -176,8 +181,6 @@ async function desativarFuncionario(req, res) {
     let infoUsuario = req.user;
     let id = req.body.id;
 
-    console.log(req)
-
     if (infoUsuario.role != "gerente") {
 
         res.status(403).json({
@@ -201,7 +204,7 @@ async function desativarFuncionario(req, res) {
         const respostaFunc = await funcionarioModel.verificarfuncionario(id);
 
         console.log(respostaFunc)
-        if(respostaFunc[0].gestor_id != infoUsuario.id || respostaFunc.length == 0){
+        if(respostaFunc.length == 0 || respostaFunc[0].gestor_id != infoUsuario.id){
             res.status(400).json("Não pode mexer nesse funcionário")
             console.log("Não pode mexer nesse")
             return;
@@ -257,7 +260,7 @@ async function informacoesUsuario(req, res) {
         const respostaFunc = await funcionarioModel.verificarfuncionario(id);
 
         console.log(respostaFunc)
-        if(respostaFunc[0].gestor_id != infoUsuario.id || respostaFunc.length == 0){
+        if(respostaFunc.length == 0 || respostaFunc[0].gestor_id != infoUsuario.id){
             res.status(400).json("Não pode mexer nesse funcionário")
             console.log("Não pode mexer nesse")
             return;
@@ -288,11 +291,130 @@ async function informacoesUsuario(req, res) {
     }
 }
 
+async function validarAcessoAoFuncionario(req, res, exigirEmpresa) {
+    let infoUsuario = req.user;
+    let id = parseInt(req.body.id);
+    let empresaId = parseInt(req.body.empresa_id);
+
+    if (infoUsuario.role != "gerente") {
+        res.status(403).json({
+            "res": "Não permitido"
+        })
+        return null;
+    }
+
+    if (!id || (exigirEmpresa && !empresaId)) {
+        res.status(400).json({
+            "res": "Tá faltando campo"
+        })
+        return null;
+    }
+
+    const respostaFunc = await funcionarioModel.verificarfuncionario(id);
+    if (respostaFunc.length == 0 || respostaFunc[0].gestor_id != infoUsuario.id) {
+        res.status(400).json("Não pode mexer nesse funcionário")
+        return null;
+    }
+
+    if (exigirEmpresa) {
+        const acessoDoGerente = await funcionarioModel.buscarVinculo(infoUsuario.id, empresaId);
+        if (acessoDoGerente.length == 0) {
+            res.status(403).json({
+                "res": "Você não tem acesso a essa empresa"
+            })
+            return null;
+        }
+    }
+
+    return { id: id, empresaId: empresaId };
+}
+
+async function listarEmpresasFuncionario(req, res) {
+    try {
+        const dados = await validarAcessoAoFuncionario(req, res, false);
+        if (!dados) return false;
+
+        const empresas = await funcionarioModel.listarEmpresasDoFuncionario(dados.id);
+
+        res.status(200).json({
+            "empresas": empresas
+        })
+        return true;
+    } catch (erro) {
+        res.status(500).json({
+            "res": "Deu erro",
+            "erro": erro
+        })
+        console.log(erro);
+        return false;
+    }
+}
+
+async function adicionarEmpresaFuncionario(req, res) {
+    try {
+        const dados = await validarAcessoAoFuncionario(req, res, true);
+        if (!dados) return false;
+
+        const jaTemAcesso = await funcionarioModel.buscarVinculo(dados.id, dados.empresaId);
+        if (jaTemAcesso.length != 0) {
+            res.status(400).json({
+                "res": "O funcionário já tem acesso a essa empresa"
+            })
+            return false;
+        }
+
+        await funcionarioModel.adicionarEmpresa(dados.id, dados.empresaId);
+
+        res.status(200).json({
+            "res": "Empresa vinculada com sucesso"
+        })
+        return true;
+    } catch (erro) {
+        res.status(500).json({
+            "res": "Deu erro",
+            "erro": erro
+        })
+        console.log(erro);
+        return false;
+    }
+}
+
+async function removerEmpresaFuncionario(req, res) {
+    try {
+        const dados = await validarAcessoAoFuncionario(req, res, true);
+        if (!dados) return false;
+
+        const resposta = await funcionarioModel.removerEmpresa(dados.id, dados.empresaId);
+
+        if (resposta.affectedRows == 0) {
+            res.status(404).json({
+                "res": "O funcionário não tem acesso a essa empresa"
+            })
+            return false;
+        }
+
+        res.status(200).json({
+            "res": "Empresa desvinculada com sucesso"
+        })
+        return true;
+    } catch (erro) {
+        res.status(500).json({
+            "res": "Deu erro",
+            "erro": erro
+        })
+        console.log(erro);
+        return false;
+    }
+}
+
 
 module.exports = {
     listarFuncionarios,
     criarFuncionario,
     editarFuncionario,
     desativarFuncionario,
-    informacoesUsuario
+    informacoesUsuario,
+    listarEmpresasFuncionario,
+    adicionarEmpresaFuncionario,
+    removerEmpresaFuncionario
 }
