@@ -37,10 +37,41 @@ function informacoesFuncionario(id){
     return database.executar(instrucao, id);
 }
 
+function listarEmpresasDoFuncionario(idFuncionario){
+    let instrucao = `SELECT ec.id_empresa, ec.nome_fantasia AS nome_empresa FROM usuario_empresa AS ue
+INNER JOIN empresa_cliente AS ec ON ec.id_empresa = ue.empresa_id
+WHERE ue.usuario_id = ?
+ORDER BY ec.nome_fantasia`;
+
+    return database.executar(instrucao, idFuncionario);
+}
+
+function buscarVinculo(idUsuario, idEmpresa){
+    let instrucao = `SELECT usuario_id, empresa_id FROM usuario_empresa WHERE usuario_id = ? AND empresa_id = ?`;
+
+    return database.executar(instrucao, [idUsuario, idEmpresa]);
+}
+
+function adicionarEmpresa(idFuncionario, idEmpresa){
+    let instrucao = `INSERT INTO usuario_empresa(usuario_id, empresa_id) VALUES (?, ?)`;
+
+    return database.executar(instrucao, [idFuncionario, idEmpresa]);
+}
+
+function removerEmpresa(idFuncionario, idEmpresa){
+    let instrucao = `DELETE FROM usuario_empresa WHERE usuario_id = ? AND empresa_id = ?`;
+
+    return database.executar(instrucao, [idFuncionario, idEmpresa]);
+}
+
 module.exports = {
    listarFuncionarios,
    editarFuncionario,
    desativarFuncionario,
    informacoesFuncionario,
-   verificarfuncionario
+   verificarfuncionario,
+   listarEmpresasDoFuncionario,
+   buscarVinculo,
+   adicionarEmpresa,
+   removerEmpresa
 };
