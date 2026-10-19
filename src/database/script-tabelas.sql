@@ -8,6 +8,14 @@ CREATE TABLE empresa_cliente (
     criacao TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+
+CREATE TABLE empresa_fornecedora (
+    id_empresa_fornecedora INT PRIMARY KEY NOT NULL,
+    nome_fantasia VARCHAR(100) NOT NULL,
+    cnpj VARCHAR(18) NOT NULL UNIQUE,
+    criado_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE usuario (
     id_usuario INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
     gestor_id INT,
@@ -48,13 +56,6 @@ CREATE TABLE usuario_empresa (
         REFERENCES empresa_cliente(id_empresa),
 
     INDEX fk_usuario_empresa_empresa_idx (empresa_id)
-);
-
-CREATE TABLE empresa_fornecedora(
-	id_empresa_fornecedora INT PRIMARY KEY NOT NULL,
-    nome_fantasia VARCHAR(100) NOT NULL,
-    cnpj VARCHAR(18) NOT NULL UNIQUE,
-    criado_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE categoria (
@@ -144,7 +145,6 @@ CREATE TABLE Contrato_SLA (
     INDEX fk_contrato_sla_empresa_idx (fkEmpresa)
 );
 
-
 CREATE TABLE Alerta (
     idAlerta INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
     registrado_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -170,3 +170,6 @@ CREATE TABLE indisponibilidade (
 
     INDEX fk_indisponibilidade_dispositivo_idx (fk_dispositivo)
 );
+
+INSERT INTO empresa_fornecedora (id_empresa_fornecedora, nome_fantasia, cnpj)
+VALUES (1, 'Cisco', '00.000.000/0001-00');

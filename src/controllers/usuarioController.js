@@ -1,5 +1,6 @@
 var bcrypt = require("bcrypt");
 var jwt = require("jsonwebtoken");
+var crypto = require("crypto");
 var usuarioModel = require("../models/usuarioModel");
 
 async function autenticar(req, res) {
@@ -250,31 +251,48 @@ async function cadastrarGerente(req, res) {
             return;
         }
 
-        fetch("http://localhost:3333/usuarios/criar-usuario", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                email: email,
-                cargo: "gerente",
-                gestor_id: role.id
+        let respostaEmail;
+
+        try {
+            respostaEmail = await fetch("http://localhost:3333/usuarios/criar-usuario", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    email: email,
+                    cargo: "gerente",
+                    gestor_id: role.id
+                })
+            });
+        } catch (erroEmail) {
+            // Serviço de e-mail fora do ar: em vez de derrubar o servidor, cria o gerente aqui mesmo
+            // e devolve o token para o super admin entregar a ele
+            console.log("Serviço de e-mail indisponível:", erroEmail.message);
+
+            const token = crypto.randomBytes(8).toString("hex").toUpperCase();
+            await usuarioModel.criarUsuarioPendente(email, "gerente", role.id, role.empresa, token);
+
+            res.status(201).json({
+                "res": "Serviço de e-mail indisponível. O gerente foi criado: entregue o token a ele.",
+                "token": token
             })
-        }).then(response => {
-            if (response.ok) {
-                console.log("Criação de usuário realizado com sucesso! Um email já foi enviado com o token de acesso.");
-                res.status(200).json({
-                    "res": "Usuário gerente criado com sucesso"
-                })
-                return true;
-            } else {
-                console.log("Houve um erro ao tentar realizar a criação de usuário. Verifique se o token é válido.");
-                res.status(400).json({
-                    "res": "Houve um erro ao tentar realizar a criação de usuário. Verifique se o token é válido."
-                })
-                return false;
-            }
+            return true;
+        }
+
+        if (respostaEmail.ok) {
+            console.log("Criação de usuário realizado com sucesso! Um email já foi enviado com o token de acesso.");
+            res.status(200).json({
+                "res": "Usuário gerente criado com sucesso"
+            })
+            return true;
+        }
+
+        console.log("Houve um erro ao tentar realizar a criação de usuário. Verifique se o token é válido.");
+        res.status(400).json({
+            "res": "Houve um erro ao tentar realizar a criação de usuário. Verifique se o token é válido."
         })
+        return false;
 
     } catch (erro) {
         console.log("Deu erro")

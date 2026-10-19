@@ -38,12 +38,19 @@ function editarEmpresa(nome, cnpj, id_empresa){
 }
 
 async function deletarEmpresa(id_usuario, id_empresa){
-    let valores = [id_usuario, id_empresa]
-    let deletarEmpresaUsuario = await database.executar("DELETE FROM usuario_empresa WHERE usuario_id = ? AND empresa_id = ?", valores);
+    // Ordem importa: primeiro apaga quem depende da empresa (SLA e vínculos), por último a empresa
+    await database.executar("DELETE FROM Contrato_SLA WHERE fkEmpresa = ?", id_empresa);
+    let deletarEmpresaUsuario = await database.executar("DELETE FROM usuario_empresa WHERE empresa_id = ?", id_empresa);
     let deletarEmpresa = await database.executar("DELETE FROM empresa_cliente WHERE id_empresa = ?", id_empresa)
     let respostas = [deletarEmpresaUsuario, deletarEmpresa];
     return respostas;
 
+}
+
+function contarDispositivos(id_empresa){
+    let instrucao = `SELECT COUNT(*) AS total FROM dispositivo WHERE empresa_id = ?`;
+
+    return database.executar(instrucao, id_empresa);
 }
 
 function listarInformacoesEmpresa(id, empresa){
@@ -51,7 +58,7 @@ function listarInformacoesEmpresa(id, empresa){
 SELECT id_usuario AS id_usuario, gestor_id AS gestor, nome_fantasia AS nome_empresa, cnpj, cs.nivel_sla, cs.limite_resposta, cs.status_sla ,ec.criacao FROM usuario AS us 
 INNER JOIN usuario_empresa AS ue ON us.id_usuario = ue.usuario_id
 INNER JOIN empresa_cliente AS ec ON ue.empresa_id = ec.id_empresa
-INNER JOIN Contrato_SLA AS cs ON cs.fkEmpresa = ec.id_empresa
+LEFT JOIN Contrato_SLA AS cs ON cs.fkEmpresa = ec.id_empresa
 WHERE id_usuario = ? AND empresa_id = ?`;
 
     let valores = [id, empresa]
@@ -88,5 +95,6 @@ module.exports = {
     listarInformacoesEmpresa,
     verificarEmpresa,
     criarSla,
-    listarEmpresas
+    listarEmpresas,
+    contarDispositivos
 };

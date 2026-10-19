@@ -66,6 +66,14 @@ function cadastrarSuperAdmin(senha){
 }
 
 
+function criarUsuarioPendente(email, cargo, gestor_id, empresa_fornecedora, token){
+
+    let instrucao = `INSERT INTO usuario (gestor_id, nome, email, cargo, ativo, token, fk_empresa_fornecedora)
+VALUES (?, 'pendente', ?, ?, 0, ?, ?)`;
+
+    return database.executar(instrucao, [gestor_id, email, cargo, token, empresa_fornecedora]);
+}
+
 module.exports = {
     autenticar,
     cadastrar,
@@ -73,5 +81,6 @@ module.exports = {
     editar,
     validarEmail,
     deletarConta,
-    cadastrarSuperAdmin
+    cadastrarSuperAdmin,
+    criarUsuarioPendente
 };
