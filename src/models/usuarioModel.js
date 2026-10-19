@@ -60,7 +60,7 @@ function cadastrarSuperAdmin(senha){
     fk_empresa_fornecedora,
     ativo
 ) VALUES
-(NULL, 'admin', 'admin@cisco.com', ?, 'gerente', 1, 1)`;
+(NULL, 'admin', 'admin@cisco.com', ?, 'super', 1, 1)`;
 
     return database.executar(instrucao, senha)
 }
