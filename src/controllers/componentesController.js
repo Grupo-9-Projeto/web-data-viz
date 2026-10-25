@@ -47,7 +47,7 @@ async function listarComponentes(req, res) {
         const resposta = await componenteModel.listarComponentes(id_dispositivo)
 
         if (resposta.length == 0) {
-            res.status(400).json("Não tem componentes")
+            res.status(400).json([])
             console.log("Não tem componentes")
             return false;
         }
@@ -71,7 +71,9 @@ async function criarComponente(req, res) {
     let id_dispositivo = req.body.idDispositivo;
     let empresa_id = req.body.empresa_id;
 
-    let id_tipo = req.body.tipo_id;
+    let nome_tipo = req.body.nome_tipo;
+    let unidade_medida = req.body.unidade_medida;
+
     let nome_identificador = req.body.nome_identificador;
     let capacidade = req.body.capacidade
     let limiar_atencao = req.body.limiar_atencao;
@@ -79,7 +81,7 @@ async function criarComponente(req, res) {
     let limiar_critico = req.body.limiar_critico
 
 
-    if (!id_dispositivo || !empresa_id || !id_tipo || !nome_identificador || !capacidade || !limiar_alto || !limiar_atencao || !limiar_critico) {
+    if (!id_dispositivo || !empresa_id || !nome_tipo || !unidade_medida || !nome_identificador || !capacidade || !limiar_alto || !limiar_atencao || !limiar_critico) {
         res.status(400).json({
             "Resposta": "Tá faltando campo"
         })
@@ -116,7 +118,9 @@ async function criarComponente(req, res) {
             return false;
         }
 
-        const componente = componenteModel.criarComponente(id_dispositivo, id_tipo, nome_identificador, capacidade, limiar_atencao, limiar_alto, limiar_critico)
+        const respostaTipoComponente = await componenteModel.criarTipoComponente(nome_tipo, unidade_medida)
+       
+        const componente = await componenteModel.criarComponente(id_dispositivo, respostaTipoComponente.insertId, nome_identificador, capacidade, limiar_atencao, limiar_alto, limiar_critico)
 
         if (componente.affectedRows == 0) {
             res.status(500).json("Não foi criado")
@@ -139,6 +143,7 @@ async function criarComponente(req, res) {
 async function editarComponente(req, res) {
     let inforUsuario = req.user
 
+    
     let id_dispositivo = req.body.idDispositivo;
     let empresa_id = req.body.empresa_id;
 
@@ -149,7 +154,7 @@ async function editarComponente(req, res) {
     let limiar_atencao = req.body.limiar_atencao;
     let limiar_alto = req.body.limiar_alto
     let limiar_critico = req.body.limiar_critico
-
+    let status = req.body.status
 
     if (!id_dispositivo || !empresa_id || !id_tipo || !nome_identificador || !capacidade || !limiar_alto || !limiar_atencao || !limiar_critico || !componte_id) {
         res.status(400).json({
@@ -199,7 +204,7 @@ async function editarComponente(req, res) {
             console.log("não pode mexer aqui")
             return false;
         }
-        const editarComponente = await componenteModel.editarComponente(id_tipo, nome_identificador, capacidade, limiar_atencao, limiar_alto, limiar_critico, componte_id)
+        const editarComponente = await componenteModel.editarComponente(id_tipo, nome_identificador, capacidade, limiar_atencao, limiar_alto, limiar_critico, componte_id, status)
 
         if (editarComponente.affectedRows == 0) {
             res.status(500).json("Não foi editado")
@@ -354,19 +359,21 @@ async function listarInformacoesComponente(req, res){
             return false;
         }
         const resposta = await componenteModel.listarInformacoesDispositivo(componte_id)
-
+      
+        const tiposComponentes = await componenteModel.listarTipoComponente(resposta[0].tipo_id);
         if (editarComponente.length == 0) {
             res.status(500).json("Não tem informações")
             console.log("Não tem informações desse dispositivo")
             return false;
         }
 
-        res.status(201).json(resposta)
+        res.status(201).json([resposta, tiposComponentes])
         console.log(resposta)
         return true;
     } catch (erro) {
         res.status(500).json({
-            "res": "Deu erro"
+            "res": erro,
+            
         })
         console.log(erro);
         return false;

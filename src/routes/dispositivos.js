@@ -34,7 +34,7 @@ router.post("/listar_informacoes_dispositivo", function(req, res, next){
     dispositivoController.listarInformacoesDispositivo(req, res);
 })
 
-router.get("/listar_modelos", function(req, res, next){
+router.get("/listar_categorias", function(req, res, next){
     authToken.authMiddlewareUser(req, res , next)
 }, function(req, res){
     dispositivoController.listarCategorias(req, res);

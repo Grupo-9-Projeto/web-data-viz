@@ -135,6 +135,7 @@ async function editarDispositivo(req, res) {
     let ip = req.body.ip;
     let endereco_mac = req.body.endereco_mac;
     let numero_serie = req.body.numero_serie;
+    let status = req.body.status_dispositivo;
 
     if (infoUser.role != "gerente") {
 
@@ -167,13 +168,13 @@ async function editarDispositivo(req, res) {
             console.log("Não pode mexer aqui")
             return;
         }
-        for (let i = 0; i < dispositivos.length; i++) {
-            if (dispositivos[i].endereco_mac.toLowerCase() == endereco_mac.toLowerCase()) {
-                res.status(400).json("Já existe um equipamento com esse endereco")
-                console.log("Já existe um equipamento com esse endereco")
-                return false;
-            }
-        }
+        // for (let i = 0; i < dispositivos.length; i++) {
+        //     if (dispositivos[i].endereco_mac.toLowerCase() == endereco_mac.toLowerCase()) {
+        //         res.status(400).json("Já existe um equipamento com esse endereco")
+        //         console.log("Já existe um equipamento com esse endereco")
+        //         return false;
+        //     }
+        // }
         const dispositivosRes = await dispositivoModel.verificarDispositivo(empresa_id);
         let idsDispositivos = [];
 
@@ -187,7 +188,7 @@ async function editarDispositivo(req, res) {
             return false;
         }
 
-        const editarDispo = await dispositivoModel.editarDispositivo(empresa_id, dispositivo_id, ip, endereco_mac, numero_serie)
+        const editarDispo = await dispositivoModel.editarDispositivo(empresa_id, dispositivo_id, ip, endereco_mac, numero_serie, status)
 
         res.status(201).json("Dispositivo editado com sucesso")
         console.log("dispositivo editado")
@@ -310,7 +311,7 @@ async function listarInformacoesDispositivo(req, res) {
 
         const resposta = await dispositivoModel.listarInformacoesDispositivo(dispositivo_id)
 
-        res.status(201).json(resposta)
+        res.status(200).json(resposta)
         return true;
     } catch (erro) {
         res.status(500).json({
@@ -334,15 +335,16 @@ async function listarCategorias(req, res){
     }
 
     try {
-        const resposta = await dispositivoModel.listarCategorias();
+        const respostaCategorias = await dispositivoModel.listarCategorias();
+        const respostaModelos = await dispositivoModel.listarTodosModelos();
 
-        if(resposta.length == 0){
-            res.status(400).json("Não tem categorias")
-            console.log("Não tem categorias")
+        if(respostaCategorias.length == 0 || respostaModelos.length == 0){
+            res.status(400).json("Não tem categorias ou modelos")
+            console.log("Não tem categorias ou modelos")
             return false;
         }
 
-        res.status(200).json(resposta)
+        res.status(200).json([respostaCategorias, respostaModelos])
         console.log("Deu certo pegar as categorias")
         return false;
     } catch (erro) {
