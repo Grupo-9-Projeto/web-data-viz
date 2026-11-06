@@ -35,7 +35,7 @@ app.use("/funcionarios", funcionarioRouter);
 app.use("/dispositivos", dispositivoRouter);
 app.use("/componentes", componentesRouter);
 
-app.listen(PORTA_APP, function () {
+app.listen(PORTA_APP, HOST_APP, function () {
     console.log(`
 ######   ######    #####    ######    #####  
 ##    ##  ##   ##  ##   ##  ##    ##  ##   ## 

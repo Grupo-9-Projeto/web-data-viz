@@ -15,6 +15,15 @@ async function listarComponentes(req, res) {
         return false;
     }
 
+    if (inforUsuario.role != "gerente") {
+
+        res.status(403).json({
+            "res": "Não permitido"
+        })
+        console.log("Deu erro, chefe")
+        return false;
+    }
+
 
     try {
         const empresas = await empresaModel.verificarEmpresa(inforUsuario.id)
@@ -80,6 +89,14 @@ async function criarComponente(req, res) {
     let limiar_alto = req.body.limiar_alto
     let limiar_critico = req.body.limiar_critico
 
+     if (inforUsuario.role != "gerente") {
+
+        res.status(403).json({
+            "res": "Não permitido"
+        })
+        console.log("Deu erro, chefe")
+        return false;
+    }
 
     if (!id_dispositivo || !empresa_id || !nome_tipo || !unidade_medida || !nome_identificador || !capacidade || !limiar_alto || !limiar_atencao || !limiar_critico) {
         res.status(400).json({
@@ -163,6 +180,14 @@ async function editarComponente(req, res) {
         console.log("tá faltnado campo")
         return false;
     }
+     if (inforUsuario.role != "gerente") {
+
+        res.status(403).json({
+            "res": "Não permitido"
+        })
+        console.log("Deu erro, chefe")
+        return false;
+    }
 
 
     try {
@@ -240,6 +265,14 @@ async function desativarComponente(req, res){
         console.log("tá faltnado campo")
         return false;
     }
+     if (inforUsuario.role != "gerente") {
+
+        res.status(403).json({
+            "res": "Não permitido"
+        })
+        console.log("Deu erro, chefe")
+        return false;
+    }    
 
 
     try {
@@ -317,6 +350,14 @@ async function listarInformacoesComponente(req, res){
         console.log("tá faltnado campo")
         return false;
     }
+     if (inforUsuario.role != "gerente") {
+
+        res.status(403).json({
+            "res": "Não permitido"
+        })
+        console.log("Deu erro, chefe")
+        return false;
+    }
 
 
     try {
@@ -380,11 +421,43 @@ async function listarInformacoesComponente(req, res){
     }
 }
 
+async function listarTodosTiposComponentes(req, res) {
+    let inforUsuario = req.user
+
+    if (inforUsuario.role != "gerente") {
+
+        res.status(400).json({
+            "res": "Não permitido"
+        })
+        console.log("Deu erro, chefe")
+        return false;
+    }
+
+    try{
+        const resposta = await componenteModel.listarTodosTiposComponentes();
+
+        if(resposta.length == 0){
+            res.status(400).json("Não tem tipos de componente")
+            return;
+        }
+
+        res.status(200).json(resposta);
+    }catch(erro){
+        res.status(500).json({
+            "res": erro,
+            
+        })
+        console.log(erro);
+        return false;
+    }
+}
+
 
 module.exports = {
     listarComponentes,
     criarComponente,
     editarComponente,
     desativarComponente,
-    listarInformacoesComponente
+    listarInformacoesComponente,
+    listarTodosTiposComponentes
 }

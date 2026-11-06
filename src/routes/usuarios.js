@@ -35,4 +35,12 @@ router.post("/cadastrar_gerente", function(req, res, next){
     usuarioController.cadastrarGerente(req, res);
 })
 
+router.get("/informacoes_usuario", function(req, res, next){
+    authToken.authMiddlewareUser(req, res , next)
+}, function(req, res){
+    usuarioController.pegarInformacoesUsuario(req, res);
+})
+
+
+
 module.exports = router;

@@ -43,6 +43,10 @@ function criarTipoComponente(nome, unidade_medida){
   return database.executar(instrucao, [nome, unidade_medida])
 }
 
+function listarTodosTiposComponentes(){
+  let intrucao = `SELECT * FROM tipo_componente`;
+  return database.executar(intrucao)
+}
 
 
 module.exports = {
@@ -52,5 +56,6 @@ module.exports = {
   editarComponente,
   desativarComponente,
   listarInformacoesDispositivo,
-  criarTipoComponente
+  criarTipoComponente,
+  listarTodosTiposComponentes
 };

@@ -74,6 +74,12 @@ VALUES (?, 'pendente', ?, ?, 0, ?, ?)`;
     return database.executar(instrucao, [gestor_id, email, cargo, token, empresa_fornecedora]);
 }
 
+function pegarInformacoesUsuario(id_usuario){
+    let instrucao = `SELECT id_usuario, nome, email FROM usuario WHERE id_usuario = ?`;
+
+    return database.executar(instrucao, id_usuario)
+}
+
 module.exports = {
     autenticar,
     cadastrar,
@@ -82,5 +88,6 @@ module.exports = {
     validarEmail,
     deletarConta,
     cadastrarSuperAdmin,
-    criarUsuarioPendente
+    criarUsuarioPendente,
+    pegarInformacoesUsuario
 };

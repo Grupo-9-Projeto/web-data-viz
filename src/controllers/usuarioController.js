@@ -39,7 +39,7 @@ async function autenticar(req, res) {
             }
 
             const accessToken = jwt.sign(
-                { id: valores.id, role: valores.cargo, gestor: valores.gestor_id, empresa: valores.empresa },
+                { id: valores.id, role: valores.cargo, gestor: valores.gestor_id, empresa: valores.empresa, nome: valores.nome },
                 process.env.JWT_SECRET,
                 { expiresIn: process.env.JWT_EXPIRES }
             );
@@ -302,6 +302,33 @@ async function cadastrarGerente(req, res) {
     }
 }
 
+async function pegarInformacoesUsuario(req, res){
+    let id = req.user;
+
+    try{
+        const resposta = await usuarioModel.pegarInformacoesUsuario(id.id);
+
+        if(resposta.length == 0){
+            res.status(400).json("Não tem esse usuario")
+            console.log("Não tem esse usuario")
+            return;
+        }
+
+        if(resposta[0].id_usuario != id.id){
+            res.status(400).json("Não pode ver as informações desse usuário")
+            console.log("Não pode ver as informações desse usuário")
+            return;
+        }
+
+        res.status(200).json(resposta)
+    }catch(erro){
+        console.log("Deu erro")
+        console.log(erro)
+        res.status(500).json(erro)
+        return null;
+    }
+}
+
 
 module.exports = {
     autenticar,
@@ -309,5 +336,6 @@ module.exports = {
     editarConta,
     deletarConta,
     cadastraSuperAdmin,
-    cadastrarGerente
+    cadastrarGerente,
+    pegarInformacoesUsuario
 }
