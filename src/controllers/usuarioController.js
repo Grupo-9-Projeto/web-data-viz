@@ -250,7 +250,7 @@ async function cadastrarGerente(req, res) {
             return;
         }
 
-        fetch("http://localhost:3333/usuarios/criar-usuario", {
+        fetch("http://argos-email:3333/usuarios/criar-usuario", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
