@@ -27,6 +27,8 @@ var empresaRouter = require("./src/routes/empresas");
 var funcionarioRouter = require("./src/routes/funcionarios");
 var dispositivoRouter = require("./src/routes/dispositivos");
 var componentesRouter = require("./src/routes/componentes");
+// CRIAR A PARTIR DAQUI SUA VARIÁVEL ROUTER
+
 
 app.use("/", indexRouter);
 app.use("/usuarios", usuarioRouter);
@@ -34,6 +36,10 @@ app.use("/empresa", empresaRouter);
 app.use("/funcionarios", funcionarioRouter);
 app.use("/dispositivos", dispositivoRouter);
 app.use("/componentes", componentesRouter);
+
+// QUANDO FOR FAZER O INDIVIDUAL, ADICIONA ABAIXO A STRING QUE VAI CHAMAR SUA ROTA, LEMBRA QUE A VARIÁVEL ROUTER PRECISAR ESTAR CRIADA. LINHA 29 EM DIANTE
+//EXEMPLO:
+//app.use("/joao", joaoRouter);
 
 app.listen(PORTA_APP, HOST_APP, function () {
     console.log(`
@@ -49,5 +55,9 @@ app.listen(PORTA_APP, HOST_APP, function () {
     Você está rodando sua aplicação em ambiente de .:${process.env.AMBIENTE_PROCESSO}:. \n\n
     \tSe .:desenvolvimento:. você está se conectando ao banco local. \n
     \tSe .:producao:. você está se conectando ao banco remoto. \n\n
-    \t\tPara alterar o ambiente, comente ou descomente as linhas 1 ou 2 no arquivo 'app.js'\n\n`);
+    \t\tPara alterar o ambiente, comente ou descomente as linhas 1 ou 2 no arquivo 'app.js'\n\n
+    =============================================================================================
+    TA FUNCIONANDO O CONTAINER
+    =============================================================================================
+    `);
 });
