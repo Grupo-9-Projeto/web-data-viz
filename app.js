@@ -28,6 +28,7 @@ var funcionarioRouter = require("./src/routes/funcionarios");
 var dispositivoRouter = require("./src/routes/dispositivos");
 var componentesRouter = require("./src/routes/componentes");
 // CRIAR A PARTIR DAQUI SUA VARIÁVEL ROUTER
+var lucasRouter = require("./src/routes/lucasIndividual");
 
 
 app.use("/", indexRouter);
@@ -40,6 +41,7 @@ app.use("/componentes", componentesRouter);
 // QUANDO FOR FAZER O INDIVIDUAL, ADICIONA ABAIXO A STRING QUE VAI CHAMAR SUA ROTA, LEMBRA QUE A VARIÁVEL ROUTER PRECISAR ESTAR CRIADA. LINHA 29 EM DIANTE
 //EXEMPLO:
 //app.use("/joao", joaoRouter);
+app.use("/lucas", lucasRouter);
 
 app.listen(PORTA_APP, HOST_APP, function () {
     console.log(`
