@@ -292,6 +292,8 @@ async function obterDadosEquipamento(req, res) {
 
         res.status(200).json({
             dispositivo: {
+                id: disp.id_dispositivo,
+                idEmpresa: disp.id_empresa,
                 nome: disp.numero_serie || disp.modelo,
                 empresa: disp.empresa,
                 categoria: disp.categoria,
