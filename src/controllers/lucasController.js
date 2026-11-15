@@ -1,7 +1,7 @@
 var { S3Client, ListObjectsV2Command, GetObjectCommand } = require("@aws-sdk/client-s3");
 var lucasModel = require("../models/lucasModel");
 
-var BUCKET = process.env.S3_BUCKET || "bucket-argos-teste";
+var BUCKET = process.env.S3_BUCKET;
 var s3 = new S3Client({
     region: process.env.AWS_REGION || "us-east-1"
 });
@@ -69,6 +69,10 @@ function formatarDataLocal(dataObj) {
 }
 
 async function listarChavesClientS3(mac) {
+    if (!BUCKET) {
+            throw new Error("Variável de ambiente S3_BUCKET não definida.");
+        }
+    
     var prefixo = "client/dispositivos/capturas/" + mac + "/";
     var chaves = [];
     var tokenContinuacao = undefined;
