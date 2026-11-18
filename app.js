@@ -13,7 +13,6 @@ var HOST_APP = process.env.APP_HOST;
 
 var app = express();
 
-// 1. Aplique o CORS no topo, antes dos parsers e arquivos estáticos
 app.use(cors());
 
 app.use(express.json());
@@ -30,6 +29,7 @@ var componentesRouter = require("./src/routes/componentes");
 // CRIAR A PARTIR DAQUI SUA VARIÁVEL ROUTER
 var lucasRouter = require("./src/routes/lucasIndividual");
 var joaoRouter = require("./src/routes/joaoIndividual");
+var mariaRouter = require("./src/routes/mariaIndividual");
 
 
 app.use("/", indexRouter);
@@ -44,6 +44,8 @@ app.use("/componentes", componentesRouter);
 //app.use("/joao", joaoRouter);
 app.use("/lucas", lucasRouter);
 app.use("/joao", joaoRouter);
+app.use("/maria", mariaRouter);
+app.use("/previsoes", mariaRouter);
 
 app.listen(PORTA_APP, HOST_APP, function () {
     console.log(`
