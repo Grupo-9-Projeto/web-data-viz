@@ -29,6 +29,7 @@ var dispositivoRouter = require("./src/routes/dispositivos");
 var componentesRouter = require("./src/routes/componentes");
 // CRIAR A PARTIR DAQUI SUA VARIÁVEL ROUTER
 var lucasRouter = require("./src/routes/lucasIndividual");
+var joaoRouter = require("./src/routes/joaoIndividual");
 
 
 app.use("/", indexRouter);
@@ -42,6 +43,7 @@ app.use("/componentes", componentesRouter);
 //EXEMPLO:
 //app.use("/joao", joaoRouter);
 app.use("/lucas", lucasRouter);
+app.use("/joao", joaoRouter);
 
 app.listen(PORTA_APP, HOST_APP, function () {
     console.log(`
