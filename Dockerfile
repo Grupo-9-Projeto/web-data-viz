@@ -1,21 +1,8 @@
-
-# Imagem base com Node.js
-FROM node:22-alpine
-
-# Diretório de trabalho dentro do container
+FROM node:20-alpine
 WORKDIR /app
-
-# Copia os arquivos de dependências
+ENV TZ=America/Sao_Paulo
 COPY package*.json ./
-
-# Instala as dependências
-RUN npm i
-
-# Copia o restante do projeto
+RUN npm ci --omit=dev
 COPY . .
-
-# Porta utilizada pelo backend
 EXPOSE 8080
-
-# Inicia a aplicação
-CMD ["npm", "start"]
+CMD ["node", "app.js"]
