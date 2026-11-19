@@ -60,7 +60,7 @@ GROUP BY ec.nome_fantasia`;
 }
 
 function rankEquipamentos(id_usuario){
-    let consulta = `SELECT di.endereco_mac AS endereco_mac, ca.nome AS categoria, di.status_dispositivo AS status, COUNT(
+    let consulta = `SELECT ec.id_empresa, di.id_dispositivo,di.endereco_mac AS endereco_mac, ca.nome AS categoria, di.status_dispositivo AS status, COUNT(
 																														CASE WHEN al.nivel_alerta = 'critico' THEN al.idAlerta END
 ) AS alertas_criticos FROM usuario AS us 
 INNER JOIN usuario_empresa AS ue ON us.id_usuario = ue.usuario_id
@@ -78,14 +78,23 @@ ORDER BY alertas_criticos DESC`;
 }
 
 function equipamentosEmpresa(id_usuario, id_empresa){
-    let consulta = `SELECT ec.nome_fantasia ,di.endereco_mac AS endereco_mac, ca.nome AS categoria, di.status_dispositivo AS status, 
+    let consulta = `SELECT ec.id_empresa, di.id_dispositivo,ec.nome_fantasia ,di.endereco_mac AS endereco_mac, ca.nome AS categoria, di.status_dispositivo AS status, 
 (
         SELECT nivel_alerta FROM alerta AS al2
         INNER JOIN componente AS co2 ON al2.fkComponente = co2.id_componente 
         WHERE co2.dispositivo_id = di.id_dispositivo
         ORDER BY al2.registrado_em DESC, al2.idAlerta
         LIMIT 1
-    ) AS ultimo_alerta
+    ) AS ultimo_alerta,
+DATE_FORMAT((
+    SELECT al2.registrado_em
+    FROM alerta AS al2
+    INNER JOIN componente AS co2
+        ON al2.fkComponente = co2.id_componente
+    WHERE co2.dispositivo_id = di.id_dispositivo
+    ORDER BY al2.registrado_em DESC, al2.idAlerta DESC
+    LIMIT 1
+), '%d/%m/%Y %H:%i') AS data_alerta
 FROM usuario AS us 
 INNER JOIN usuario_empresa AS ue ON us.id_usuario = ue.usuario_id
 INNER JOIN empresa_cliente AS ec ON ue.empresa_id = ec.id_empresa

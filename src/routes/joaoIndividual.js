@@ -21,7 +21,7 @@ router.post("/porcentagem_empresa", function(req, res, next){
     joaoController.pegarPorcentagemEmpresa(req, res);
 })
 
-router.post("/rankEquipamentos", function(req, res, next){
+router.get("/rankEquipamentos", function(req, res, next){
     authToken.authMiddlewareUser(req, res , next)
 }, function(req, res){
     joaoController.pegarRankEquipamentos(req, res);
