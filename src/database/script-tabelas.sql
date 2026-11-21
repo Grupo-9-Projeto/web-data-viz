@@ -171,5 +171,33 @@ CREATE TABLE indisponibilidade (
     INDEX fk_indisponibilidade_dispositivo_idx (fk_dispositivo)
 );
 
+CREATE TABLE violacao_sla (
+    id_violacao INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
+    dispositivo_id INT NOT NULL,
+    tipo_sla VARCHAR(30) NOT NULL,
+    prioridade VARCHAR(20) NOT NULL,
+    status VARCHAR(30) NOT NULL DEFAULT 'aberto',
+    chamado_jira VARCHAR(30),
+    responsavel VARCHAR(250),
+    descricao TEXT,
+    ocorrido_em DATETIME NOT NULL,
+    resolvido_em DATETIME NULL,
+    criacao TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_violacao_sla_dispositivo
+        FOREIGN KEY (dispositivo_id)
+        REFERENCES dispositivo(id_dispositivo),
+
+    CONSTRAINT chk_violacao_sla_tipo
+        CHECK (tipo_sla IN ('disponibilidade', 'resolucao', 'tempo_resposta')),
+    CONSTRAINT chk_violacao_sla_prioridade
+        CHECK (prioridade IN ('critico', 'alto', 'medio')),
+    CONSTRAINT chk_violacao_sla_status
+        CHECK (status IN ('aberto', 'em_atendimento', 'resolvido')),
+
+    INDEX fk_violacao_sla_dispositivo_idx (dispositivo_id),
+    INDEX violacao_sla_ocorrido_idx (ocorrido_em)
+);
+
 INSERT INTO empresa_fornecedora (id_empresa_fornecedora, nome_fantasia, cnpj)
 VALUES (1, 'Cisco', '00.000.000/0001-00');
