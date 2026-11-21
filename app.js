@@ -18,6 +18,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, "..", "site-institucional", "src")));
 
 var indexRouter = require("./src/routes/index");
 
@@ -31,6 +32,7 @@ var lucasRouter = require("./src/routes/lucasIndividual");
 var joaoRouter = require("./src/routes/joaoIndividual");
 var mariaRouter = require("./src/routes/mariaIndividual");
 var pedroRouter = require("./src/routes/pedroIndividual");
+var thabataRouter = require("./src/routes/thabataIndividual");
 
 
 app.use("/", indexRouter);
@@ -45,9 +47,11 @@ app.use("/componentes", componentesRouter);
 //app.use("/joao", joaoRouter);
 app.use("/lucas", lucasRouter);
 app.use("/joao", joaoRouter);
+var mariaRouter = require("./src/routes/mariaIndividual"); // já declarado acima
 app.use("/maria", mariaRouter);
 app.use("/previsoes", mariaRouter);
 app.use("/pedro", pedroRouter);
+app.use("/thabata", thabataRouter);
 
 app.listen(PORTA_APP, HOST_APP, function () {
     console.log(`
