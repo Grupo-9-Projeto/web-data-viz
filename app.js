@@ -33,6 +33,7 @@ var joaoRouter = require("./src/routes/joaoIndividual");
 var mariaRouter = require("./src/routes/mariaIndividual");
 var pedroRouter = require("./src/routes/pedroIndividual");
 var thabataRouter = require("./src/routes/thabataIndividual");
+var eduardoRouter = require("./src/routes/eduardoIndividual")
 
 
 app.use("/", indexRouter);
@@ -52,6 +53,7 @@ app.use("/maria", mariaRouter);
 app.use("/previsoes", mariaRouter);
 app.use("/pedro", pedroRouter);
 app.use("/thabata", thabataRouter);
+app.use("/relatorioAlerta", eduardoRouter);
 
 app.listen(PORTA_APP, HOST_APP, function () {
     console.log(`
