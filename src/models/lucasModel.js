@@ -55,9 +55,15 @@ function listarAlertasDispositivo(idDispositivo) {
             a.idAlerta,
             a.registrado_em,
             a.nivel_alerta,
+            a.valor_registrado,
+            a.unidade_medida,
+            a.descricao,
+            a.jira_key,
+            a.status_jira,
+            c.nome_identificador AS componente,
             t.nome AS tipo_nome,
             c.limiar_critico
-        FROM Alerta AS a
+        FROM alerta AS a
         INNER JOIN componente AS c ON a.fkComponente = c.id_componente
         INNER JOIN tipo_componente AS t ON c.tipo_id = t.id_tipo
         WHERE c.dispositivo_id = ?

@@ -262,9 +262,11 @@ async function obterDadosEquipamento(req, res) {
             var diasAtras = Math.max(Math.round((hojeMeiaNoite - diaAlertaMs) / 86400000), 0);
 
             var campo = mapearTipoMetrica(al.tipo_nome);
-            var valorLeitura = null;
+            var valorLeitura = (al.valor_registrado !== null && al.valor_registrado !== undefined)
+                ? arredondar(al.valor_registrado, 1)
+                : null;
 
-            if (campo && leiturasNormalizadas.length > 0) {
+            if (valorLeitura === null && campo && leiturasNormalizadas.length > 0) {
                 var tsAlerta = dtAlerta.getTime();
                 var menorDiff = Infinity;
                 for (var j = 0; j < leiturasNormalizadas.length; j++) {
@@ -284,9 +286,14 @@ async function obterDadosEquipamento(req, res) {
                 hora: dhAlerta.hora,
                 diasAtras: diasAtras,
                 tipo: al.tipo_nome,
+                componente: al.componente || al.tipo_nome,
                 nivel: al.nivel_alerta,
                 valor: valorLeitura,
-                limite: al.limiar_critico !== null ? Number(al.limiar_critico) : null
+                unidade: al.unidade_medida || "%",
+                descricao: al.descricao || null,
+                limite: al.limiar_critico !== null ? Number(al.limiar_critico) : null,
+                jiraKey: al.jira_key || null,
+                statusJira: al.status_jira || null
             });
         }
 
