@@ -1,5 +1,5 @@
 
-const relatorioModel = require("../models/relatorioModel");
+const relatorioModel = require("../models/eduardoModel");
 
 const {
     S3Client,
@@ -66,11 +66,13 @@ function extrairDataHoraNomeArquivo(chave) {
 
 // Monta o caminho da pasta de capturas de um dia.
 function montarPrefixoCaptura(mac, data) {
+    const macFormatado = String(mac).trim().toLowerCase();
+
     const ano = data.getFullYear();
     const mes = String(data.getMonth() + 1).padStart(2, "0");
     const dia = String(data.getDate()).padStart(2, "0");
 
-    return `client/dispositivos/capturas/${mac}/${ano}/${mes}/${dia}/`;
+    return `client/dispositivos/capturas/${macFormatado}/${ano}/${mes}/${dia}/`;
 }
 
 
@@ -122,8 +124,20 @@ async function lerArquivoS3(chave) {
 
 
 // Procura a captura mais próxima do horário do alerta.
+
 async function buscarCapturaAlerta(mac, dataAlerta) {
 
+    
+    // 1. Monta o prefixo da pasta correspondente ao dia do alerta.
+    const prefixo = montarPrefixoCaptura(mac, dataAlerta);
+
+    // 2. Busca os arquivos JSON disponíveis nessa pasta do S3.
+    const arquivos = await listarArquivosS3(prefixo);
+
+    console.log("[S3] Prefixo pesquisado:", prefixo);
+    console.log("[S3] Arquivos encontrados:", arquivos);
+
+    // 3. Extrai a data e o horário de cada arquivo.
     const arquivosOrdenados = arquivos
         .map(chave => ({
             chave,
@@ -141,28 +155,36 @@ async function buscarCapturaAlerta(mac, dataAlerta) {
         )
         .sort((a, b) => a.diferenca - b.diferenca);
 
+    // 4. Se não houver captura próxima, retorna null.
     if (arquivosOrdenados.length === 0) {
         return null;
     }
 
+    // 5. Lê o arquivo mais próximo do horário do alerta.
     const registro = await lerArquivoS3(
         arquivosOrdenados[0].chave
     );
 
+    console.log("[S3] Tipo do conteúdo:", Array.isArray(registro) ? "Array" : typeof registro);
+    console.log("[S3] Conteúdo encontrado:", registro);
+
+    // 6. Se o arquivo contiver vários registros,
+    // seleciona aquele cuja coleta ocorreu mais perto do alerta.
     if (!Array.isArray(registro) || registro.length === 0) {
         return null;
     }
 
-    const registrosOrdenados = registro
+    const registrosValidos = registro
         .map(atual => {
-            const data = converterDataHora(
+            const dataAtual = converterDataHora(
                 atual["Quando foi Coletado"]
             );
 
             return {
                 registro: atual,
-                diferenca: data
-                    ? Math.abs(data.getTime() - dataAlerta.getTime())
+                data: dataAtual,
+                diferenca: dataAtual
+                    ? Math.abs(dataAtual.getTime() - dataAlerta.getTime())
                     : Infinity
             };
         })
@@ -171,10 +193,13 @@ async function buscarCapturaAlerta(mac, dataAlerta) {
         )
         .sort((a, b) => a.diferenca - b.diferenca);
 
-    return registrosOrdenados.length > 0
-        ? registrosOrdenados[0].registro
+    return registrosValidos.length > 0
+        ? registrosValidos[0].registro
         : null;
+
+    
 }
+
 
 
 // Transforma o registro do S3 para o formato esperado pelo front-end.
@@ -302,10 +327,11 @@ async function buscarRelatorioAlerta(req, res) {
 
     } catch (erro) {
 
-        console.error("Erro ao buscar relatório do alerta:", erro);
+        console.error("ERRO AO CARREGAR RELATÓRIO:", erro);
 
-        return res.status(500).json({
-            mensagem: "Erro ao carregar o relatório do alerta."
+        res.status(500).json({
+            mensagem: "Erro ao carregar o relatório do alerta.",
+            erro: erro.message
         });
     }
 }
