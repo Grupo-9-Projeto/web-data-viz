@@ -62,7 +62,7 @@ function cadastrarSuperAdmin(senha){
 ) VALUES
 (NULL, 'admin', 'admin@cisco.com', ?, 'super', 1, 1)`;
 
-    return database.executar(instrucao, senha)
+    return database.executar(instrucao, [senha])
 }
 
 
