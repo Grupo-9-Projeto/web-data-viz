@@ -124,11 +124,66 @@ function listarChamados(id_usuario, inicio, fim) {
     return database.executar(instrucao, [id_usuario, inicio, fim]);
 }
 
+function listarChamadosPorModelo(id_usuario, inicio, fim) {
+    let instrucao = `
+        SELECT
+            t.modelo,
+            COUNT(*) AS chamados,
+            COUNT(t.concluido_em) AS concluidos,
+            AVG(TIMESTAMPDIFF(SECOND, t.aberto_em, t.concluido_em)) / 3600 AS tempo_medio_horas
+        FROM (
+            SELECT
+                mo.nome_modelo AS modelo,
+                al.registrado_em AS aberto_em,
+                (
+                    SELECT MIN(al2.registrado_em)
+                    FROM Alerta AS al2
+                    WHERE al2.fkComponente = al.fkComponente
+                    AND al2.nivel_alerta = 'saudavel'
+                    AND al2.registrado_em > al.registrado_em
+                ) AS concluido_em
+            FROM usuario_empresa AS ue
+            INNER JOIN dispositivo AS di ON di.empresa_id = ue.empresa_id
+            INNER JOIN modelo AS mo ON mo.id_modelo = di.modelo_id
+            INNER JOIN componente AS co ON co.dispositivo_id = di.id_dispositivo
+            INNER JOIN Alerta AS al ON al.fkComponente = co.id_componente
+            WHERE ue.usuario_id = ?
+            AND al.nivel_alerta IN ('critico', 'atencao')
+            AND al.registrado_em >= ?
+            AND al.registrado_em < ?
+        ) AS t
+        GROUP BY t.modelo
+        ORDER BY chamados DESC, t.modelo
+    `;
+
+    return database.executar(instrucao, [id_usuario, inicio, fim]);
+}
+
+
+function listarDispositivosPorModelo(id_usuario) {
+    let instrucao = `
+        SELECT
+            mo.nome_modelo AS modelo,
+            di.id_dispositivo,
+            di.endereco_mac AS mac
+        FROM usuario_empresa AS ue
+        INNER JOIN dispositivo AS di ON di.empresa_id = ue.empresa_id
+        INNER JOIN modelo AS mo ON mo.id_modelo = di.modelo_id
+        WHERE ue.usuario_id = ?
+        ORDER BY mo.nome_modelo, di.id_dispositivo
+    `;
+
+    return database.executar(instrucao, id_usuario);
+}
+
+
 module.exports = {
     contarAlertasPorSemana,
     contarAlertasPorSemanaEEmpresa,
     contarAlertasPorDiaEHorario,
     listarEmpresasComSla,
     contarAnalistas,
-    listarChamados
+    listarChamados,
+    listarChamadosPorModelo,
+    listarDispositivosPorModelo
 };
