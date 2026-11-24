@@ -1,4 +1,5 @@
 let mariaModel = require("../models/mariaModel");
+let { S3Client, ListObjectsV2Command, GetObjectCommand } = require("@aws-sdk/client-s3");
 
 let SEMANAS_DO_MODELO = 8;     
 let SEMANAS_DO_GRAFICO = 4;  
@@ -79,6 +80,7 @@ function regressaoLinear(valores) {
     }
     return { a: a, b: mediaY - a * mediaX };
 }
+
 function erroDaReta(valores, reta) {
     if (valores.length < 3) {
         return 0;
@@ -473,9 +475,328 @@ async function chamadosPrevisoes(req, res) {
     }
 }
 
+
+let DIAS_HISTORICO_ANOMALIAS = Number(process.env.ANOMALIAS_DIAS) || 7;
+let INTERVALO_OCORRENCIA_MINUTOS = 15;
+let VALIDADE_CACHE_ANOMALIAS = 10 * 60 * 1000;
+let COMPONENTES_MONITORADOS = ["cpu", "ram", "disco", "rede"];
+let PREFIXO_CLIENT_CAPTURAS = "client/dispositivos/capturas/";
+
+let s3 = new S3Client({
+    region: process.env.AWS_REGION || "us-east-1"
+});
+let cacheAnomalias = {};
+
+function converterDataLeitura(texto) {
+    if (!texto) {
+        return null;
+    }
+
+    let data = new Date(String(texto).trim().replace(" ", "T"));
+    if (isNaN(data.getTime())) {
+        return null;
+    }
+    return data.getTime();
+}
+
+async function listarChavesDoDia(mac, dia) {
+    let prefixo = PREFIXO_CLIENT_CAPTURAS + mac + "/" + dia.replace(/-/g, "/") + "/";
+    let chaves = [];
+    let token = undefined;
+
+    do {
+        let resposta = await s3.send(new ListObjectsV2Command({
+            Bucket: process.env.S3_BUCKET,
+            Prefix: prefixo,
+            ContinuationToken: token
+        }));
+        let itens = resposta.Contents || [];
+        for (let i = 0; i < itens.length; i++) {
+            if (itens[i].Key && itens[i].Key.endsWith(".json")) {
+                chaves.push(itens[i].Key);
+            }
+        }
+        token = resposta.IsTruncated ? resposta.NextContinuationToken : undefined;
+    } while (token);
+
+    return chaves;
+}
+
+async function listarChavesDoMac(mac, dias) {
+    let chaves = [];
+    for (let i = 0; i < dias.length; i++) {
+        let doDia = await listarChavesDoDia(mac, dias[i]);
+        for (let j = 0; j < doDia.length; j++) {
+            chaves.push(doDia[j]);
+        }
+    }
+    return chaves;
+}
+
+async function lerLeiturasDoMac(mac, dias) {
+    let chaves = await listarChavesDoMac(mac, dias);
+
+    if (chaves.length == 0 && mac.toLowerCase() != mac) {
+        chaves = await listarChavesDoMac(mac.toLowerCase(), dias);
+    }
+
+    let leituras = [];
+    let tamanhoLote = 25;
+    for (let i = 0; i < chaves.length; i += tamanhoLote) {
+        let fatia = chaves.slice(i, i + tamanhoLote);
+        let resultados = await Promise.all(fatia.map(async function (chave) {
+            let resposta = await s3.send(new GetObjectCommand({
+                Bucket: process.env.S3_BUCKET,
+                Key: chave
+            }));
+            let texto = await resposta.Body.transformToString("utf-8");
+            return JSON.parse(texto);
+        }));
+
+        for (let j = 0; j < resultados.length; j++) {
+            if (Array.isArray(resultados[j])) {
+                for (let k = 0; k < resultados[j].length; k++) {
+                    leituras.push(resultados[j][k]);
+                }
+            }
+        }
+    }
+    return leituras;
+}
+
+function resumirLeituras(leituras) {
+    let resumo = {
+        registros: 0,
+        registrosSemFlag: 0,
+        leiturasComponente: { cpu: 0, ram: 0, disco: 0, rede: 0 },
+        ocorrencias: { cpu: 0, ram: 0, disco: 0, rede: 0 }
+    };
+    let linhas = [];
+    for (let i = 0; i < leituras.length; i++) {
+        let t = converterDataLeitura(leituras[i]["Quando foi Coletado"]);
+        if (t === null) {
+            continue;
+        }
+        linhas.push({ t: t, dados: leituras[i] });
+    }
+    linhas.sort(function (a, b) {
+        return a.t - b.t;
+    });
+
+    let ultimaAnomalia = { cpu: null, ram: null, disco: null, rede: null };
+    let intervalo = INTERVALO_OCORRENCIA_MINUTOS * 60 * 1000;
+
+    for (let i = 0; i < linhas.length; i++) {
+        resumo.registros++;
+        let temFlag = false;
+
+        for (let c = 0; c < COMPONENTES_MONITORADOS.length; c++) {
+            let componente = COMPONENTES_MONITORADOS[c];
+            let flag = linhas[i].dados["anomalia_" + componente];
+            if (flag !== 0 && flag !== 1) {
+                continue;
+            }
+            temFlag = true;
+            resumo.leiturasComponente[componente]++;
+
+            if (flag === 1) {
+                let ultima = ultimaAnomalia[componente];
+                if (ultima === null || linhas[i].t - ultima > intervalo) {
+                    resumo.ocorrencias[componente]++;
+                }
+                ultimaAnomalia[componente] = linhas[i].t;
+            }
+        }
+        if (!temFlag) {
+            resumo.registrosSemFlag++;
+        }
+    }
+    return resumo;
+}
+
+async function resumirMac(mac, dias) {
+    let guardado = cacheAnomalias[mac];
+    if (guardado && Date.now() - guardado.carregadoEm < VALIDADE_CACHE_ANOMALIAS) {
+        return guardado.resumo;
+    }
+
+    let leituras = await lerLeiturasDoMac(mac, dias);
+    let resumo = resumirLeituras(leituras);
+    cacheAnomalias[mac] = { carregadoEm: Date.now(), resumo: resumo };
+    return resumo;
+}
+
+function diasDaJanela(quantidade) {
+    let dias = [];
+    let hoje = new Date();
+    for (let i = 0; i < quantidade; i++) {
+        dias.push(formatarData(somarDias(hoje, -i)));
+    }
+    return dias;
+}
+
+async function modelosPrevisoes(req, res) {
+    let infoUsuario = req.user;
+
+    if (infoUsuario.role != "gerente") {
+        res.status(403).json({
+            "res": "Não permitido"
+        });
+        return false;
+    }
+
+    try {
+        let periodo = calcularPeriodo();
+        let inicio = formatarData(periodo.inicioHistorico);
+        let fim = formatarData(periodo.semanaAtual);
+
+        let linhasChamados = await mariaModel.listarChamadosPorModelo(infoUsuario.id, inicio, fim);
+        let linhasDispositivos = await mariaModel.listarDispositivosPorModelo(infoUsuario.id);
+
+        let modelos = {};
+        for (let i = 0; i < linhasDispositivos.length; i++) {
+            let nome = linhasDispositivos[i].modelo;
+            if (!modelos[nome]) {
+                modelos[nome] = { modelo: nome, chamados: 0, concluidos: 0, tempoMedioHoras: null, macs: [] };
+            }
+            modelos[nome].macs.push(linhasDispositivos[i].mac);
+        }
+        for (let i = 0; i < linhasChamados.length; i++) {
+            let nome = linhasChamados[i].modelo;
+            if (!modelos[nome]) {
+                modelos[nome] = { modelo: nome, chamados: 0, concluidos: 0, tempoMedioHoras: null, macs: [] };
+            }
+            modelos[nome].chamados = Number(linhasChamados[i].chamados);
+            modelos[nome].concluidos = Number(linhasChamados[i].concluidos);
+            if (linhasChamados[i].tempo_medio_horas !== null) {
+                modelos[nome].tempoMedioHoras = Math.round(Number(linhasChamados[i].tempo_medio_horas) * 100) / 100;
+            }
+        }
+
+        let etl = { status: "ok", mensagem: null, equipamentosConsultados: 0, equipamentosComDados: 0 };
+        let resumosPorMac = {};
+        let todosMacs = [];
+        let nomes = Object.keys(modelos);
+        for (let i = 0; i < nomes.length; i++) {
+            for (let j = 0; j < modelos[nomes[i]].macs.length; j++) {
+                todosMacs.push(modelos[nomes[i]].macs[j]);
+            }
+        }
+        etl.equipamentosConsultados = todosMacs.length;
+
+        if (!process.env.S3_BUCKET) {
+            etl.status = "nao_configurado";
+            etl.mensagem = "Variável de ambiente S3_BUCKET não definida.";
+        } else {
+            try {
+                let dias = diasDaJanela(DIAS_HISTORICO_ANOMALIAS);
+                let resumos = await Promise.all(todosMacs.map(function (mac) {
+                    return resumirMac(mac, dias);
+                }));
+                for (let i = 0; i < todosMacs.length; i++) {
+                    resumosPorMac[todosMacs[i]] = resumos[i];
+                    if (resumos[i].registros > 0) {
+                        etl.equipamentosComDados++;
+                    }
+                }
+                if (etl.equipamentosComDados == 0) {
+                    etl.status = "sem_dados";
+                }
+            } catch (erroS3) {
+                console.error(erroS3);
+                etl.status = "indisponivel";
+                etl.mensagem = "Não foi possível ler os indicadores da ETL no S3.";
+            }
+        }
+
+        let resposta = [];
+        for (let i = 0; i < nomes.length; i++) {
+            let modelo = modelos[nomes[i]];
+            let item = {
+                modelo: modelo.modelo,
+                chamados: modelo.chamados,
+                concluidos: modelo.concluidos,
+                tempoMedioHoras: modelo.tempoMedioHoras,
+                equipamentos: modelo.macs.length,
+                equipamentosComDados: 0,
+                registrosMonitorados: null,
+                leiturasComponentes: null,
+                anomalias: null,
+                anomaliasTotal: null,
+                taxaPorMil: null,
+                componentePredominante: null
+            };
+
+            if (etl.status == "ok" || etl.status == "sem_dados") {
+                let registros = 0;
+                let leituras = 0;
+                let ocorrencias = { cpu: 0, ram: 0, disco: 0, rede: 0 };
+
+                for (let j = 0; j < modelo.macs.length; j++) {
+                    let resumo = resumosPorMac[modelo.macs[j]];
+                    if (resumo.registros > 0) {
+                        item.equipamentosComDados++;
+                    }
+                    registros += resumo.registros;
+                    for (let c = 0; c < COMPONENTES_MONITORADOS.length; c++) {
+                        let componente = COMPONENTES_MONITORADOS[c];
+                        leituras += resumo.leiturasComponente[componente];
+                        ocorrencias[componente] += resumo.ocorrencias[componente];
+                    }
+                }
+
+                let total = 0;
+                let maior = 0;
+                let predominante = null;
+                for (let c = 0; c < COMPONENTES_MONITORADOS.length; c++) {
+                    let componente = COMPONENTES_MONITORADOS[c];
+                    total += ocorrencias[componente];
+                    if (ocorrencias[componente] > maior) {
+                        maior = ocorrencias[componente];
+                        predominante = componente;
+                    }
+                }
+
+                item.registrosMonitorados = registros;
+                item.leiturasComponentes = leituras;
+                item.anomalias = ocorrencias;
+                item.anomaliasTotal = total;
+                item.componentePredominante = predominante;
+                if (leituras > 0) {
+                    item.taxaPorMil = Math.round((total / leituras) * 10000) / 10;
+                }
+            }
+            resposta.push(item);
+        }
+
+        resposta.sort(function (a, b) {
+            if (b.chamados != a.chamados) {
+                return b.chamados - a.chamados;
+            }
+            return (b.anomaliasTotal || 0) - (a.anomaliasTotal || 0);
+        });
+
+        res.status(200).json({
+            periodoChamados: { inicio: inicio, fim: fim },
+            janelaAnomaliasDias: DIAS_HISTORICO_ANOMALIAS,
+            intervaloOcorrenciaMinutos: INTERVALO_OCORRENCIA_MINUTOS,
+            etl: etl,
+            modelos: resposta
+        });
+        return true;
+    } catch (erro) {
+        console.error(erro);
+        res.status(500).json({
+            "res": "Deu erro"
+        });
+        return false;
+    }
+}
+
 module.exports = {
     previsaoSemanas,
     previsaoMapaCalor,
     previsaoEmpresas,
-    chamadosPrevisoes
+    chamadosPrevisoes,
+    modelosPrevisoes
 };

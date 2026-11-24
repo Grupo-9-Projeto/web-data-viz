@@ -27,4 +27,10 @@ router.get("/chamados", function(req, res, next){
     mariaController.chamadosPrevisoes(req, res);
 })
 
+router.get("/modelos", function(req, res, next){
+    authToken.authMiddlewareUser(req, res , next)
+}, function(req, res){
+    mariaController.modelosPrevisoes(req, res);
+})
+
 module.exports = router;
