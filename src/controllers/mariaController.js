@@ -481,6 +481,8 @@ let INTERVALO_OCORRENCIA_MINUTOS = 15;
 let VALIDADE_CACHE_ANOMALIAS = 10 * 60 * 1000;
 let COMPONENTES_MONITORADOS = ["cpu", "ram", "disco", "rede"];
 let PREFIXO_CLIENT_CAPTURAS = "client/dispositivos/capturas/";
+let COLUNA_TEMPERATURA_EXTERNA = "temperatura externa(C)";
+let LIMITE_TEMPERATURA_QUENTE = Number(process.env.TEMPERATURA_QUENTE) || 30;
 
 let s3 = new S3Client({
     region: process.env.AWS_REGION || "us-east-1"
@@ -564,12 +566,27 @@ async function lerLeiturasDoMac(mac, dias) {
     return leituras;
 }
 
+function lerTemperaturaExterna(leitura) {
+    let valor = leitura[COLUNA_TEMPERATURA_EXTERNA];
+    if (typeof valor !== "number" || !isFinite(valor)) {
+        return null;
+    }
+    return valor;
+}
+
 function resumirLeituras(leituras) {
     let resumo = {
         registros: 0,
         registrosSemFlag: 0,
         leiturasComponente: { cpu: 0, ram: 0, disco: 0, rede: 0 },
         ocorrencias: { cpu: 0, ram: 0, disco: 0, rede: 0 }
+    };
+    resumo.temperatura = {
+        leituras: 0,
+        soma: 0,
+        maxima: null,
+        quente: { leituras: 0, comAnomalia: 0 },
+        normal: { leituras: 0, comAnomalia: 0 }
     };
     let linhas = [];
     for (let i = 0; i < leituras.length; i++) {
@@ -610,6 +627,26 @@ function resumirLeituras(leituras) {
         if (!temFlag) {
             resumo.registrosSemFlag++;
         }
+
+        let temperatura = lerTemperaturaExterna(linhas[i].dados);
+        if (temperatura !== null) {
+            resumo.temperatura.leituras++;
+            resumo.temperatura.soma += temperatura;
+            if (resumo.temperatura.maxima === null || temperatura > resumo.temperatura.maxima) {
+                resumo.temperatura.maxima = temperatura;
+            }
+
+            if (temFlag) {
+                let grupo = temperatura >= LIMITE_TEMPERATURA_QUENTE ? resumo.temperatura.quente : resumo.temperatura.normal;
+                grupo.leituras++;
+                for (let c = 0; c < COMPONENTES_MONITORADOS.length; c++) {
+                    if (linhas[i].dados["anomalia_" + COMPONENTES_MONITORADOS[c]] === 1) {
+                        grupo.comAnomalia++;
+                        break;
+                    }
+                }
+            }
+        }
     }
     return resumo;
 }
@@ -633,6 +670,56 @@ function diasDaJanela(quantidade) {
         dias.push(formatarData(somarDias(hoje, -i)));
     }
     return dias;
+}
+
+function arredondar1(valor) {
+    return Math.round(valor * 10) / 10;
+}
+
+function resumirTemperaturaDoModelo(macs, resumosPorMac) {
+    let leituras = 0;
+    let soma = 0;
+    let maxima = null;
+    let quente = { leituras: 0, comAnomalia: 0 };
+    let normal = { leituras: 0, comAnomalia: 0 };
+
+    for (let i = 0; i < macs.length; i++) {
+        let resumo = resumosPorMac[macs[i]];
+        if (!resumo || !resumo.temperatura) {
+            continue;
+        }
+        let t = resumo.temperatura;
+        leituras += t.leituras;
+        soma += t.soma;
+        if (t.maxima !== null && (maxima === null || t.maxima > maxima)) {
+            maxima = t.maxima;
+        }
+        quente.leituras += t.quente.leituras;
+        quente.comAnomalia += t.quente.comAnomalia;
+        normal.leituras += t.normal.leituras;
+        normal.comAnomalia += t.normal.comAnomalia;
+    }
+
+    if (leituras === 0) {
+        return null;
+    }
+
+    return {
+        media: arredondar1(soma / leituras),
+        maxima: arredondar1(maxima),
+        leituras: leituras,
+        limiteQuente: LIMITE_TEMPERATURA_QUENTE,
+        quente: {
+            leituras: quente.leituras,
+            comAnomalia: quente.comAnomalia,
+            taxaPorMil: quente.leituras > 0 ? arredondar1((quente.comAnomalia / quente.leituras) * 1000) : null
+        },
+        normal: {
+            leituras: normal.leituras,
+            comAnomalia: normal.comAnomalia,
+            taxaPorMil: normal.leituras > 0 ? arredondar1((normal.comAnomalia / normal.leituras) * 1000) : null
+        }
+    };
 }
 
 async function modelosPrevisoes(req, res) {
@@ -727,6 +814,8 @@ async function modelosPrevisoes(req, res) {
                 componentePredominante: null
             };
 
+            item.temperatura = null;
+
             if (etl.status == "ok" || etl.status == "sem_dados") {
                 let registros = 0;
                 let leituras = 0;
@@ -765,6 +854,7 @@ async function modelosPrevisoes(req, res) {
                 if (leituras > 0) {
                     item.taxaPorMil = Math.round((total / leituras) * 10000) / 10;
                 }
+                item.temperatura = resumirTemperaturaDoModelo(modelo.macs, resumosPorMac);
             }
             resposta.push(item);
         }
