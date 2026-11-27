@@ -1,12 +1,17 @@
 const database = require("../database/config");
 
-function buscarEmpresasMenorEquipe() {
+function buscarEmpresasMenorEquipe(idGerente) {
+    const id = Number(idGerente);
+
     const instrucao = `
         SELECT
             ec.nome_fantasia AS nome,
             COUNT(ue.usuario_id) AS funcionarios,
             'Ativa' AS status
         FROM empresa_cliente ec
+        INNER JOIN usuario_empresa ger
+            ON ger.empresa_id = ec.id_empresa
+            AND ger.usuario_id = ${id}
         LEFT JOIN usuario_empresa ue ON ue.empresa_id = ec.id_empresa
         GROUP BY ec.id_empresa, ec.nome_fantasia
         ORDER BY funcionarios ASC, ec.nome_fantasia ASC
