@@ -60,11 +60,25 @@ function cadastrarSuperAdmin(senha){
     fk_empresa_fornecedora,
     ativo
 ) VALUES
-(NULL, 'admin', 'admin@cisco.com', ?, 'gerente', 1, 1)`;
+(NULL, 'admin', 'admin@cisco.com', ?, 'super', 1, 1)`;
 
-    return database.executar(instrucao, senha)
+    return database.executar(instrucao, [senha])
 }
 
+
+function criarUsuarioPendente(email, cargo, gestor_id, empresa_fornecedora, token){
+
+    let instrucao = `INSERT INTO usuario (gestor_id, nome, email, cargo, ativo, token, fk_empresa_fornecedora)
+VALUES (?, 'pendente', ?, ?, 0, ?, ?)`;
+
+    return database.executar(instrucao, [gestor_id, email, cargo, token, empresa_fornecedora]);
+}
+
+function pegarInformacoesUsuario(id_usuario){
+    let instrucao = `SELECT id_usuario, nome, email FROM usuario WHERE id_usuario = ?`;
+
+    return database.executar(instrucao, id_usuario)
+}
 
 module.exports = {
     autenticar,
@@ -73,5 +87,7 @@ module.exports = {
     editar,
     validarEmail,
     deletarConta,
-    cadastrarSuperAdmin
+    cadastrarSuperAdmin,
+    criarUsuarioPendente,
+    pegarInformacoesUsuario
 };

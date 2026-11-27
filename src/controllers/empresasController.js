@@ -43,7 +43,7 @@ async function criarEmpresa(req, res) {
         return false;
     }
 
-    if (!nome || !cnpj) {
+    if (!nome || !cnpj || !nivel_sla || !limite_resposta || !status_sla) {
         res.status(400).json({
             "res": "faltando algum campo"
         })
@@ -150,6 +150,13 @@ async function editarEmpresa(req, res) {
         })
         return true;
     } catch (erro) {
+        if (erro.code == "ER_DUP_ENTRY") {
+            res.status(409).json({
+                "res": "Já existe uma empresa com esse CNPJ"
+            })
+            return false;
+        }
+
         res.status(500).json({
             "res": "Deu erro",
             "erro": erro
@@ -159,12 +166,11 @@ async function editarEmpresa(req, res) {
     }
 }
 
+
 async function deletarEmpresa(req, res) {
     let infoUsuario = req.user;
 
     let id = req.body.id;
-
-    console.log(req)
 
     if (infoUsuario.role != "gerente") {
 
@@ -190,6 +196,16 @@ async function deletarEmpresa(req, res) {
             })
             console.log("Não pode mexer aqui")
             return;
+        }
+
+        // Se a empresa ainda tem equipamentos, não apaga (senão quebraria o vínculo deles)
+        const respostaDispositivos = await empresaModel.contarDispositivos(id);
+
+        if (respostaDispositivos[0].total > 0) {
+            res.status(409).json({
+                "res": "Essa empresa ainda tem equipamentos cadastrados. Remova os equipamentos antes de excluir a empresa."
+            })
+            return false;
         }
 
         const resposta = await empresaModel.deletarEmpresa(infoUsuario.id, id);

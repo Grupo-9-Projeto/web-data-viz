@@ -15,10 +15,10 @@ function authMiddlewareUser(req, res, next) {
         req.user = decoded;
         next();
     } catch (erro) {
-        res.status(500).json({
-            "Token não fornecido": erro.message
+        res.status(401).json({
+            "res": "Token inválido ou expirado"
         })
-        console.log("Token não fornecido", erro)
+        console.log("Token inválido ou expirado:", erro.message)
     }
 }
 

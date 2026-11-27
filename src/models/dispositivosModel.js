@@ -34,12 +34,12 @@ function criarDispositivo(empresa_id, modelo_id, ip, endereco_mac, numero_serie)
     return database.executar(instrucao, [empresa_id, modelo_id, ip, endereco_mac, numero_serie])
 }
 
-function editarDispositivo(empresa_id, dispositivo_id, ip, endereco_mac, numero_serie){
+function editarDispositivo(empresa_id, dispositivo_id, ip, endereco_mac, numero_serie, status){
     let instrucao = `
-    UPDATE dispositivo SET ip = ?, endereco_mac = ?, numero_serie = ? WHERE id_dispositivo = ? AND empresa_id = ?
+    UPDATE dispositivo SET ip = ?, endereco_mac = ?, numero_serie = ?, status_dispositivo = ? WHERE id_dispositivo = ? AND empresa_id = ?
     `;
 
-    return database.executar(instrucao, [ip, endereco_mac, numero_serie, dispositivo_id, empresa_id])
+    return database.executar(instrucao, [ip, endereco_mac, numero_serie, status,dispositivo_id, empresa_id])
 }
 
 function desativarDispositivo(id_dispositivo){
@@ -63,6 +63,18 @@ INNER JOIN dispositivo AS di ON ec.id_empresa = di.empresa_id WHERE ec.id_empres
     return database.executar(instrucao, id)
 }
 
+function listarModelo(categoria_id){
+    let instrucao = `SELECT * FROM modelo WHERE categoria_id = ?`;
+
+    return database.executar(instrucao, categoria_id)
+}
+
+function listarTodosModelos(){
+    let instrucao = `SELECT * FROM modelo;`;
+
+    return database.executar(instrucao)
+}
+
 module.exports = {
    listarDispositivos,
    listarCategorias,
@@ -71,5 +83,7 @@ module.exports = {
    editarDispositivo,
    desativarDispositivo,
    listarInformacoesDispositivo,
-   verificarDispositivo
+   verificarDispositivo,
+   listarModelo,
+   listarTodosModelos
 };

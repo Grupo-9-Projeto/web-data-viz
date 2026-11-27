@@ -35,4 +35,22 @@ router.post("/listar_funcionario", function(req, res, next){
     funcionarioController.informacoesUsuario(req, res);
 })
 
+router.post("/listar_empresas_funcionario", function(req, res, next){
+    authToken.authMiddlewareUser(req, res , next)
+}, function(req, res){
+    funcionarioController.listarEmpresasFuncionario(req, res);
+})
+
+router.post("/adicionar_empresa_funcionario", function(req, res, next){
+    authToken.authMiddlewareUser(req, res , next)
+}, function(req, res){
+    funcionarioController.adicionarEmpresaFuncionario(req, res);
+})
+
+router.delete("/remover_empresa_funcionario", function(req, res, next){
+    authToken.authMiddlewareUser(req, res , next)
+}, function(req, res){
+    funcionarioController.removerEmpresaFuncionario(req, res);
+})
+
 module.exports = router;

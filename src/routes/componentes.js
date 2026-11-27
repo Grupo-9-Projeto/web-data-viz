@@ -35,4 +35,10 @@ router.post("/listar_componente", function(req, res, next){
     componentesController.listarInformacoesComponente(req, res);
 })
 
+router.get("/listar_todos_tipos_componentes", function(req, res, next){
+    authToken.authMiddlewareUser(req, res , next)
+}, function(req, res){
+    componentesController.listarTodosTiposComponentes(req, res);
+})
+
 module.exports = router;

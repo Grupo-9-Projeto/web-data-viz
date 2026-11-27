@@ -13,12 +13,12 @@ var HOST_APP = process.env.APP_HOST;
 
 var app = express();
 
-// 1. Aplique o CORS no topo, antes dos parsers e arquivos estáticos
 app.use(cors());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, "..", "site-institucional", "src")));
 
 var indexRouter = require("./src/routes/index");
 
@@ -27,6 +27,14 @@ var empresaRouter = require("./src/routes/empresas");
 var funcionarioRouter = require("./src/routes/funcionarios");
 var dispositivoRouter = require("./src/routes/dispositivos");
 var componentesRouter = require("./src/routes/componentes");
+// CRIAR A PARTIR DAQUI SUA VARIÁVEL ROUTER
+var lucasRouter = require("./src/routes/lucasIndividual");
+var joaoRouter = require("./src/routes/joaoIndividual");
+var mariaRouter = require("./src/routes/mariaIndividual");
+var pedroRouter = require("./src/routes/pedroIndividual");
+var thabataRouter = require("./src/routes/thabataIndividual");
+var eduardoRouter = require("./src/routes/eduardoIndividual")
+
 
 app.use("/", indexRouter);
 app.use("/usuarios", usuarioRouter);
@@ -35,7 +43,19 @@ app.use("/funcionarios", funcionarioRouter);
 app.use("/dispositivos", dispositivoRouter);
 app.use("/componentes", componentesRouter);
 
-app.listen(PORTA_APP, function () {
+// QUANDO FOR FAZER O INDIVIDUAL, ADICIONA ABAIXO A STRING QUE VAI CHAMAR SUA ROTA, LEMBRA QUE A VARIÁVEL ROUTER PRECISAR ESTAR CRIADA. LINHA 29 EM DIANTE
+//EXEMPLO:
+//app.use("/joao", joaoRouter);
+app.use("/lucas", lucasRouter);
+app.use("/joao", joaoRouter);
+var mariaRouter = require("./src/routes/mariaIndividual"); // já declarado acima
+app.use("/maria", mariaRouter);
+app.use("/previsoes", mariaRouter);
+app.use("/pedro", pedroRouter);
+app.use("/thabata", thabataRouter);
+app.use("/relatorioAlerta", eduardoRouter);
+
+app.listen(PORTA_APP, HOST_APP, function () {
     console.log(`
 ######   ######    #####    ######    #####  
 ##    ##  ##   ##  ##   ##  ##    ##  ##   ## 
@@ -49,5 +69,9 @@ app.listen(PORTA_APP, function () {
     Você está rodando sua aplicação em ambiente de .:${process.env.AMBIENTE_PROCESSO}:. \n\n
     \tSe .:desenvolvimento:. você está se conectando ao banco local. \n
     \tSe .:producao:. você está se conectando ao banco remoto. \n\n
-    \t\tPara alterar o ambiente, comente ou descomente as linhas 1 ou 2 no arquivo 'app.js'\n\n`);
+    \t\tPara alterar o ambiente, comente ou descomente as linhas 1 ou 2 no arquivo 'app.js'\n\n
+    =============================================================================================
+    TA FUNCIONANDO O CONTAINER
+    =============================================================================================
+    `);
 });
