@@ -4,7 +4,7 @@ const { informacoesFuncionario } = require("./funcionarioModel");
 
 function listarDispositivos(idEmpresa, idUsuario){
     let instrucao = `
-SELECT ec.nome_fantasia, ue.usuario_id, ec.id_empresa,di.id_dispositivo ,di.endereco_mac, di.numero_serie AS nome, di.status_dispositivo, mo.nome_modelo, ca.nome AS nome_categoria FROM usuario AS us
+SELECT ec.nome_fantasia, ue.usuario_id, ec.id_empresa,di.id_dispositivo ,di.endereco_mac, di.numero_serie AS nome, di.status_dispositivo, mo.nome_modelo, ca.nome AS nome_categoria, di.criacao, di.ip FROM usuario AS us
 INNER JOIN usuario_empresa AS ue ON us.id_usuario = ue.usuario_id
 INNER JOIN empresa_cliente AS ec ON ec.id_empresa = ue.empresa_id
 INNER JOIN dispositivo AS di ON di.empresa_id = ec.id_empresa
