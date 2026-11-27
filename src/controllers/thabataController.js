@@ -2,7 +2,8 @@ const thabataModel = require("../models/thabataModel");
 
 async function obterDadosHome(req, res) {
     try {
-        const empresasRows = await thabataModel.buscarEmpresasMenorEquipe();
+        const idGerente = req.user.id;
+        const empresasRows = await thabataModel.buscarEmpresasMenorEquipe(idGerente);
         const chamadosRows = await thabataModel.buscarResumoChamados();
         const slasRows = await thabataModel.buscarResumoSlas();
 
